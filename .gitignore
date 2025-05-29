@@ -1,0 +1,8 @@
+*.bin
+*.elf
+*.hex
+*.map
+.vscode/
+build/
+sdkconfig
+sdkconfig.old
