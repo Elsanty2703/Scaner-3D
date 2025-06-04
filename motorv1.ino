@@ -8,22 +8,22 @@ const int EN_PIN2   = 26; // ENABLE
 const int STEP_PIN2 = 27; // STEP
 const int DIR_PIN2  = 14; // DIR*/
 
-typedef enum{ON, OFF}MOTOR_STATES;
+typedef enum{ON, OFF}PULSE_STATES;
 typedef struct{
-    MOTOR_STATES state;
+    PULSE_STATES state;
     const int prev;
     const int tau;
     const int STEP;
-}motor;
+}pulse;
 
-MOTOR_STATES setupRotation(int EN, int dir, int step, int tau);
-void Rotation(MOTOR_STATES *state);
+pulse setupRotation(int dir, int step, int tau);
+void Rotation(pulse *state);
 
-MOTOR_STATES m1, m2;
+pulse m1, m2;
 
 void setup() {
-    m1 = setupRotation(32,33,25,1000);
-    m2 = setupRotation(26,27,14,1000);
+    m1 = setupRotation(33,25,1000);
+    m2 = setupRotation(27,14,1000);
 }
 
 void loop() {
@@ -31,19 +31,20 @@ void loop() {
     Rotation(m2);
 }
 
-MOTOR_STATES setupRotation(int en, int dir, int step, int tau){
-  pinMode(en, OUTPUT);
-  pinMode(step, OUTPUT);
-  pinMode(dir, OUTPUT);
-  digitalWrite(DIR_PIN, HIGH);
-  MOTOR_STATES state;
-  state.tau = tau;
-  state.prev = micros();
-  state.STEP = step;
-  digitalWrite(step,HIGH);
+pulse setupRotation(int dir, int step, int tau, bool direction){
+    pinMode(step, OUTPUT);
+    pinMode(dir, OUTPUT);
+    if(direction)digitalWrite(DIR_PIN, HIGH);
+    else digitalWrite(DIR_PIN, LOW);
+    pulse motor;
+    motor.tau = tau;
+    motor.prev = micros();
+    motor.STEP = step;
+    motor.state = ON;
+    digitalWrite(step,HIGH);
 }
 
-void Rotation(MOTOR_STATES *motor){
+void Rotation(pulse *motor){
 
     switch(motor->state){
         case ON:
