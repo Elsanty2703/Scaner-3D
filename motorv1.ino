@@ -27,8 +27,8 @@ void setup() {
 }
 
 void loop() {
-    Rotation(m1);
-    Rotation(m2);
+    Rotation(&m1);
+    Rotation(&m2);
 }
 
 pulse setupRotation(int dir, int step, int tau, bool direction){
