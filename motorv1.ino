@@ -11,8 +11,8 @@ const int DIR_PIN2  = 14; // DIR*/
 typedef enum{ON, OFF}PULSE_STATES;
 typedef struct{
     PULSE_STATES state;
-    int prev;
-    int tau;
+    unsigned long prev;
+    unsigned long tau;
     int STEP;
 }pulse;
 
@@ -22,8 +22,8 @@ void Rotation(pulse *state);
 pulse m1, m2;
 
 void setup() {
-    m1 = setupRotation(33,25,1000, true);
-    m2 = setupRotation(27,14,1000, false);
+    m1 = setupRotation(33,25,1, true);
+    m2 = setupRotation(27,14,1, false);
 }
 
 void loop() {
@@ -38,7 +38,7 @@ pulse setupRotation(int dir, int step, int tau, bool direction){
     else digitalWrite(dir, LOW);
     pulse motor;
     motor.tau = tau;
-    motor.prev = micros();
+    motor.prev = millis();
     motor.STEP = step;
     motor.state = ON;
     digitalWrite(step,HIGH);
@@ -49,16 +49,16 @@ void Rotation(pulse *motor){
 
     switch(motor->state){
         case ON:
-            if((micros()-motor->prev)>motor->tau/2){
+            if((millis()-motor->prev)>motor->tau/2){
                 motor->state = OFF;
-                motor->prev = micros();
+                motor->prev = millis();
                 digitalWrite(motor->STEP,LOW);
             }
             break;
         case OFF:
-            if((micros()-motor->prev)>motor->tau/2){
+            if((millis()-motor->prev)>motor->tau/2){
                 motor->state = ON;
-                motor->prev = micros();
+                motor->prev = millis();
                 digitalWrite(motor->STEP,HIGH);
             }
             break;
