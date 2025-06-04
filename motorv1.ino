@@ -31,7 +31,7 @@ void loop() {
     Rotation(&m2);
 }
 
-pulse setupRotation(int dir, int step, int tau, bool direction){
+pulse setupRotation(int dir, int step, unsigned long tau, bool direction){
     pinMode(step, OUTPUT);
     pinMode(dir, OUTPUT);
     if(direction)digitalWrite(dir, HIGH);
