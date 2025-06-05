@@ -34,8 +34,7 @@ void loop() {
 pulse setupRotation(int dir, int step, unsigned long tau, bool direction){
     pinMode(step, OUTPUT);
     pinMode(dir, OUTPUT);
-    if(direction)digitalWrite(dir, HIGH);
-    else digitalWrite(dir, LOW);
+    digitalWrite(dir, direction ? HIGH : LOW); 
     pulse motor;
     motor.tau = tau;
     motor.prev = millis();
@@ -65,7 +64,3 @@ void Rotation(pulse *motor){
         
     }
 }
-// This code is for controlling two stepper motors using pulse width modulation.
-// It sets up the motors with specified parameters and alternates their states
-// to create rotation. The motors are controlled by setting the direction and
-// generating pulses at specified intervals. The code uses a simple state machine
