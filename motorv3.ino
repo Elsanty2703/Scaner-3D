@@ -23,7 +23,7 @@ typedef struct{
     int count_r, count_l, count; // counts for right and left steps
 }MOTOR;
 
-pulse setupRotation(int dir, int step, int tau, bool direction);
+pulse setupRotation(int dir, int step, unsigned long tau, bool direction);
 bool Rotation(pulse *state);
 
 MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l);
