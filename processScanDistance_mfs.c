@@ -16,7 +16,6 @@ float degrees_to_radians(float degrees) {
 void processScanDistance() {
     typedef enum {
         FILE_LOAD,
-        RAWS,
         NEGATIVE,
         CREATE_R,
         LOAD_R,
@@ -32,7 +31,7 @@ void processScanDistance() {
 
     // Constantes del escáner
     static float centerDistance = 10.3f;
-    static float zDelta = 0.8f;
+    static float zDelta = 0.1f;
     static float maxDistance = 26.5f;
     static float minDistance = 0.0f;
 
@@ -51,7 +50,7 @@ void processScanDistance() {
     static const char *outputFilename = "output.stl";
 
     static int i = 0, j = 0;
-    static int start = 0, row = 0;
+    static int start = 0, row = 0, len = 0;
 
 
     if (1) {
@@ -73,19 +72,20 @@ void processScanDistance() {
 
             case FILE_LOAD:
                 if (fscanf(file, "%d", &raw[count]) == 1) {
-                    state = RAWS;
+                    count++;
+                    state = NEGATIVE;
                 } else {
                     fclose(file);
                     state = CREATE_R;
                 }
                 break;
 
-            case RAWS:
+            case NEGATIVE:
                 if (count < MAX_RAW) {
                     if (raw[count] < 0) {
-                        state = NEGATIVE;
+                        raw[count] = 0;
+                        state = FILE_LOAD;
                     } else {
-                        count++;
                         state = FILE_LOAD;
                     }
                 } else {
@@ -94,55 +94,56 @@ void processScanDistance() {
                 }
                 break;
 
-            case NEGATIVE:
-                raw[count] = 0;
-                count++;
-                state = FILE_LOAD;
-                break;
-
             case CREATE_R:
-                for (i = 0; i < MAX_ROWS; i++) {
-                    r[i] = malloc(MAX_COLS * sizeof(float));
+                if(i<MAX_ROWS) {
+                    r[i] = (float*)malloc(MAX_COLS * sizeof(float));
+                    i++;       
+                    state = CREATE_R;
+
+                } else {
+                    i=0;
+                    state = LOAD_R;
                 }
-                i = 0;
-                row = 0;
-                start = 0;
-                state = LOAD_R;
                 break;
 
             case LOAD_R:
                 if (i < count) {
-                    if (raw[i] == 9999) {
-                        int len = i - start;
-                        if (len > MAX_COLS) len = MAX_COLS;
-                        for (j = 0; j < len; j++) {
-                            r[row][j] = centerDistance - raw[start + j];
-                        }
-                        row++;
-                        if (row >= MAX_ROWS) {
-                            state = CREATE_XYZ;
-                        } else {
-                            start = i + 1;
-                            state = R_I;
-                        }
-                    } else {
-                        state = R_I;
-                    }
+                    state = R_I;
                 } else {
                     rows = row;
                     cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
+                    i= 0;
+                    j = 0;
                     state = CREATE_XYZ;
                 }
                 break;
 
             case R_I:
-                i++;
-                state = LOAD_R;
+                if(raw >= MAX_ROUS){
+                    state = CREATE_XYZ;
+                }
+                if(raw[i] == 9999) {
+                    len = i - start;
+                    j = 0;
+                    state = R_J;
+                } else {
+                        j++;
+                        state = LOAD_R;
+                }
                 break;
 
             case R_J:
-                j++;
-                state = LOAD_R;
+                if(len > MAX_COLS) {
+                    len = MAX_COLS;
+                }
+                if(j < len){
+                    r[row][j] = centerDistance - raw[start + j];
+                }
+                else{
+                    ++row;
+                    start = i + 1;
+                    state = R_I;
+                }
                 break;
 
             case CREATE_XYZ:
