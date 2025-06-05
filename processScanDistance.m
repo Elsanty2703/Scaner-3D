@@ -52,7 +52,7 @@ theta=theta*pi/180; %Convert to radians
 % Create z-height array where each row corresponds to one z-height
 z=0:zDelta:size(r,1)*zDelta;
 z(end)=[];
-z=z';
+z=z;
 z=repmat(z,[1,size(r,2)]);
 
 [x,y,z]=pol2cart(theta,r,z); %Convert to cartesian coordinates

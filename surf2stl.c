@@ -89,5 +89,5 @@ void surf2stl(const char *filename, float **x, float **y, float **z, int rows, i
     }
 
     fclose(f);
-    printf("Wrote %d facets\n", nfacets);
+    printf("triangulos cargados a stl: %d \n", nfacets);
 }
