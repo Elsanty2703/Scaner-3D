@@ -9,9 +9,13 @@
 #define MAX_COLS 500
 #define MAX_RAW 250500
 
-void thomas_dot_ramirezm_scanner3d() {
+float degrees_to_radians(float degrees) {
+        return degrees * M_PI / 180.0f;
+    }
+
+void processScanDistance() {
     typedef enum {
-        FILE,
+        FILE_LOAD,
         RAWS,
         NEGATIVE,
         CREATE_R,
@@ -49,9 +53,6 @@ void thomas_dot_ramirezm_scanner3d() {
     static int i = 0, j = 0;
     static int start = 0, row = 0;
 
-    float degrees_to_radians(float degrees) {
-        return degrees * M_PI / 180.0f;
-    }
 
     if (1) {
         switch (state) {
@@ -66,11 +67,11 @@ void thomas_dot_ramirezm_scanner3d() {
                     perror("Error abriendo archivo");
                     state = WAIT_FOR_INPUT;
                 } else {
-                    state = FILE;
+                    state = FILE_LOAD;
                 }
                 break;
 
-            case FILE:
+            case FILE_LOAD:
                 if (fscanf(file, "%d", &raw[count]) == 1) {
                     state = RAWS;
                 } else {
@@ -85,7 +86,7 @@ void thomas_dot_ramirezm_scanner3d() {
                         state = NEGATIVE;
                     } else {
                         count++;
-                        state = FILE;
+                        state = FILE_LOAD;
                     }
                 } else {
                     fclose(file);
@@ -96,7 +97,7 @@ void thomas_dot_ramirezm_scanner3d() {
             case NEGATIVE:
                 raw[count] = 0;
                 count++;
-                state = FILE;
+                state = FILE_LOAD;
                 break;
 
             case CREATE_R:
