@@ -114,12 +114,22 @@ void processScanDistance() {
                     cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
                     i= 0;
                     j = 0;
+                    x = malloc(rows * sizeof(float *));
+                    y = malloc(rows * sizeof(float *));
+                    z = malloc(rows * sizeof(float *));
                     state = CREATE_XYZ;
                 }
                 break;
 
             case R_I:
-                if(raw >= MAX_ROUS){
+                if(raw >= MAX_ROWS){
+                    rows = row;
+                    cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
+                    i= 0;
+                    j = 0;
+                    x = malloc(rows * sizeof(float *));
+                    y = malloc(rows * sizeof(float *));
+                    z = malloc(rows * sizeof(float *));
                     state = CREATE_XYZ;
                 }
                 if(raw[i] == 9999) {
@@ -147,32 +157,36 @@ void processScanDistance() {
                 break;
 
             case CREATE_XYZ:
-                x = malloc(rows * sizeof(float *));
-                y = malloc(rows * sizeof(float *));
-                z = malloc(rows * sizeof(float *));
-                i = 0;
-                state = LOAD_XYZ;
-                break;
-
-            case LOAD_XYZ:
-                if (i < rows) {
+               
+                if(i < rows){
                     x[i] = malloc(cols * sizeof(float));
                     y[i] = malloc(cols * sizeof(float));
                     z[i] = malloc(cols * sizeof(float));
-                    for (j = 0; j < cols; j++) {
-                        float radius = r[i][j];
-                        if (radius < minDistance || radius > maxDistance) {
-                            radius = NAN;
-                        }
-                        float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
-                        x[i][j] = radius * cosf(theta);
-                        y[i][j] = radius * sinf(theta);
-                        z[i][j] = i * zDelta;
-                    }
-                    i++;
+                    j = 0;
+                    state = LOAD_XYZ;
                 } else {
+                    
                     surf2stl(outputFilename, x, y, z, rows, cols, "binary");
                     state = LIBERATE_MEMORY;
+                }
+                break;
+
+            case LOAD_XYZ:
+                if(j < cols) {
+                    float radius = r[i][j];
+                if (radius < minDistance || radius > maxDistance) {
+                    radius = NAN;
+                }
+                float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
+                x[i][j] = radius * cosf(theta);
+                y[i][j] = radius * sinf(theta);
+                z[i][j] = i * zDelta;   
+                    ++j;
+                    state = LOAD_XYZ;
+                }
+                else{
+                    ++i;
+                    state = CREATE_XYZ;
                 }
                 break;
 
