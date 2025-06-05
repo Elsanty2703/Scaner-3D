@@ -15,6 +15,7 @@ float degrees_to_radians(float degrees) {
 
 void processScanDistance() {
     typedef enum {
+        OPEN_FILE,
         FILE_LOAD,
         NEGATIVE,
         CREATE_R,
@@ -23,8 +24,7 @@ void processScanDistance() {
         R_J,
         CREATE_XYZ,
         LOAD_XYZ,
-        LIBERATE_MEMORY,
-        WAIT_FOR_INPUT
+        LIBERATE_MEMORY
     } STATE_T;
 
     static STATE_T state = WAIT_FOR_INPUT;
@@ -50,13 +50,13 @@ void processScanDistance() {
     static const char *outputFilename = "output.stl";
 
     static int i = 0, j = 0;
-    static int start = 0, row = 0, len = 0;
+    static int start = 0, row = 0, len = 0, wait = 0;
 
 
     if (1) {
         switch (state) {
 
-            case WAIT_FOR_INPUT:
+            case OPEN_FILE:
                 count = 0;
                 rows = 0;
                 cols = 0;
@@ -64,7 +64,7 @@ void processScanDistance() {
                 file = fopen(inputFilename, "r");
                 if (!file) {
                     perror("Error abriendo archivo");
-                    state = WAIT_FOR_INPUT;
+                    state = OPEN_FILE;
                 } else {
                     state = FILE_LOAD;
                 }
@@ -201,8 +201,9 @@ void processScanDistance() {
                 free(y);
                 free(z);
                 printf("STL generado y memoria liberada correctamente.\n");
-                state = WAIT_FOR_INPUT;
+                state = OPEN_FILE;
                 break;
+
         }
     }
 }
