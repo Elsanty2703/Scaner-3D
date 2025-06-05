@@ -15,7 +15,7 @@ void generateInputFile(const int **matriz, int filas, int columnas, const char *
         for (int j = 0; j < columnas; ++j) {
             fprintf(file, "%d ", matriz[i][j]);
         }
-        fprintf(file, "9999\n");  // Separador de fila, como en los datos del escáner
+        fprintf(file, "9999");  // Separador de fila, como en los datos del escáner
     }
 
     fclose(file);

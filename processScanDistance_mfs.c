@@ -1,4 +1,5 @@
 //quiero dormir
+//processScanDistance_mfs.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -34,7 +35,7 @@ void processScanDistance(const char *inputFilename , float zDelta) {
     static STATE_T state = OPEN_FILE;
 
     // Constantes del escáner
-    static float centerDistance = 10.3f;
+    static float centerDistance = 20.0f;
     static float maxDistance = 26.5f;
     static float minDistance = 0.0f;
     // Variables de trabajo
@@ -115,9 +116,9 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                     cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
                     i= 0;
                     j = 0;
-                    x = malloc(rows * sizeof(float *));
-                    y = malloc(rows * sizeof(float *));
-                    z = malloc(rows * sizeof(float *));
+                    x = calloc(rows , sizeof(float *));
+                    y = calloc(rows , sizeof(float *));
+                    z = calloc(rows , sizeof(float *));
                     state = CREATE_XYZ;
                 }
                 break;
@@ -128,14 +129,16 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                     cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
                     i= 0;
                     j = 0;
-                    x = malloc(rows * sizeof(float *));
-                    y = malloc(rows * sizeof(float *));
-                    z = malloc(rows * sizeof(float *));
+                    x = calloc(rows, sizeof(float *));
+                    y = calloc(rows, sizeof(float *));
+                    z = calloc(rows, sizeof(float *));
+
                     state = CREATE_XYZ;
                 }
                 if(raw[i] == 9999) {
                     len = i - start;
                     j = 0;
+                    i++;
                     state = R_J;
                 } else {
                     i++;
@@ -149,13 +152,12 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                 }
                 if(j < len){
                     r[row][j] = centerDistance - raw[start + j];
-                    j++;printf("i: %d \n", i);
+                    j++;
                     state = R_J;
                 }
                 else{
-                    ++i;
-                    ++row;
                     start = i + 1;
+                    ++row;
                     state = R_I;
                 }
                 break;
@@ -163,14 +165,14 @@ void processScanDistance(const char *inputFilename , float zDelta) {
             case CREATE_XYZ:
 
                 if(i < rows){
-                    x[i] = malloc(cols * sizeof(float));
-                    y[i] = malloc(cols * sizeof(float));
-                    z[i] = malloc(cols * sizeof(float));
+                    x[i] = calloc(cols, sizeof(float *));
+                    y[i] = calloc(cols, sizeof(float *));
+                    z[i] = calloc(cols, sizeof(float *));
                     j = 0;
                     state = LOAD_XYZ;
-                    printf("depuring");
+
                 } else {
-                    printf("depuring");
+
                     surf2stl(outputFilename, x, y, z, rows, cols, "binary");
                     state = LIBERATE_MEMORY;
                 }
@@ -179,13 +181,21 @@ void processScanDistance(const char *inputFilename , float zDelta) {
             case LOAD_XYZ:
                 if(j < cols) {
                     float radius = r[i][j];
-                if (radius < minDistance || radius > maxDistance) {
-                    radius = NAN;
-                }
-                float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
-                x[i][j] = radius * cosf(theta);
-                y[i][j] = radius * sinf(theta);
-                z[i][j] = i * zDelta;
+                    if (radius < minDistance || radius > maxDistance) {
+                        x[i][j] = NAN;
+                        y[i][j] = NAN;
+                        z[i][j] = NAN;
+                        printf("radius: %f \n",radius);
+                    } else {
+                        float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
+                        x[i][j] = radius * cosf(theta);
+                        y[i][j] = radius * sinf(theta);
+                        z[i][j] = i * zDelta;
+                    }
+                    printf("x: %f \n",x[i][j]);
+                    printf("y: %f \n",y[i][j]);
+                    printf("z: %f \n",z[i][j]);
+
                     ++j;
                     state = LOAD_XYZ;
                 }
