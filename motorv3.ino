@@ -11,7 +11,7 @@ const int DIR_PIN2  = 14; // DIR*/
 typedef struct{
     unsigned long prev;
     unsigned long tau;
-    int STEP;
+    int STEP, EN;
 }pulse;
 
 typedef enum{SCAN, ROTATE, ROTATE_ON, UP, UP_ON}MOTOR_STATES;
@@ -23,7 +23,7 @@ typedef struct{
     int count_r, count_l, count; // counts for right and left steps
 }MOTOR;
 
-pulse setupRotation(int dir, int step, unsigned long tau, bool direction);
+pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction);
 bool Rotation(pulse *state);
 
 MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l);
@@ -101,27 +101,30 @@ void MotorControl(MOTOR *motor){
     }
 }
 
-pulse setupRotation(int dir, int step, unsigned long tau, bool direction){
+pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction){
     pinMode(step, OUTPUT);
     pinMode(dir, OUTPUT);
-    digitalWrite(dir, direction ? HIGH : LOW); 
+    digitalWrite(dir, direction ? HIGH : LOW);
+    digitalWrite(en, HIGH);
     pulse motor;
     motor.tau = tau;
     motor.prev = millis();
     motor.STEP = step;
+    motor.EN = en;
     return motor;
 }
 
 bool Rotation(pulse *motor){
-
+    digitalWrite(motor->EN, LOW); // Enable the motor
     if((millis()-motor->prev) < motor->tau / 2){
         digitalWrite(motor->STEP, HIGH);
     } else if((millis()-motor->prev) < motor->tau){
         digitalWrite(motor->STEP, LOW);
     } else {
+        digitalWrite(motor->EN, HIGH); // Disable the motor
         motor->prev += motor->tau;  // mejor que reiniciar con `millis()`
         return true;
     }
-
+    digitalWrite(motor->EN, HIGH); // Disable the motor
     return false;
 }
