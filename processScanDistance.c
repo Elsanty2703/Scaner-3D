@@ -1,7 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "surf2stl.c"  // Asegúrate de tener esta función implementada por separado
+#include "surf2stl.c" 
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #define _USE_MATH_DEFINES
 #define MAX_ROWS 500

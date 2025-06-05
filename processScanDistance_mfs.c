@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include "surf2stl.c"
+#include "surf2stl.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -17,7 +17,7 @@ float degrees_to_radians(float degrees) {
         return degrees * M_PI / 180.0f;
     }
 
-void processScanDistance() {
+void processScanDistance(const char *inputFilename , float zDelta) {
     typedef enum {
         OPEN_FILE,
         FILE_LOAD,
@@ -35,10 +35,8 @@ void processScanDistance() {
 
     // Constantes del escáner
     static float centerDistance = 10.3f;
-    static float zDelta = 0.1f;
     static float maxDistance = 26.5f;
     static float minDistance = 0.0f;
-
     // Variables de trabajo
     static int raw[MAX_RAW];
     static int count = 0;
@@ -50,14 +48,13 @@ void processScanDistance() {
     static float **x = NULL, **y = NULL, **z = NULL;
 
     static FILE *file = NULL;
-    static const char *inputFilename = "input.txt";
     static const char *outputFilename = "output.stl";
 
     static int i = 0, j = 0;
     static int start = 0, row = 0, len = 0, wait = 0;
 
 
-    if (1) {
+    while (state!=LIBERATE_MEMORY) {
         switch (state) {
 
             case OPEN_FILE:
@@ -101,7 +98,7 @@ void processScanDistance() {
             case CREATE_R:
                 if(i<MAX_ROWS) {
                     r[i] = (float*)malloc(MAX_COLS * sizeof(float));
-                    i++;       
+                    i++;
                     state = CREATE_R;
 
                 } else {
@@ -141,7 +138,7 @@ void processScanDistance() {
                     j = 0;
                     state = R_J;
                 } else {
-                        i++;
+                    i++;
                         state = LOAD_R;
                 }
                 break;
@@ -152,10 +149,11 @@ void processScanDistance() {
                 }
                 if(j < len){
                     r[row][j] = centerDistance - raw[start + j];
-                    j++;
+                    j++;printf("i: %d \n", i);
                     state = R_J;
                 }
                 else{
+                    ++i;
                     ++row;
                     start = i + 1;
                     state = R_I;
@@ -163,15 +161,16 @@ void processScanDistance() {
                 break;
 
             case CREATE_XYZ:
-               
+
                 if(i < rows){
                     x[i] = malloc(cols * sizeof(float));
                     y[i] = malloc(cols * sizeof(float));
                     z[i] = malloc(cols * sizeof(float));
                     j = 0;
                     state = LOAD_XYZ;
+                    printf("depuring");
                 } else {
-                    
+                    printf("depuring");
                     surf2stl(outputFilename, x, y, z, rows, cols, "binary");
                     state = LIBERATE_MEMORY;
                 }
@@ -186,7 +185,7 @@ void processScanDistance() {
                 float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
                 x[i][j] = radius * cosf(theta);
                 y[i][j] = radius * sinf(theta);
-                z[i][j] = i * zDelta;   
+                z[i][j] = i * zDelta;
                     ++j;
                     state = LOAD_XYZ;
                 }
