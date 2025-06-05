@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include "surf2stl.c"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #define MAX_ROWS 500
 #define MAX_COLS 500
 #define MAX_RAW 250500
@@ -27,7 +31,7 @@ void processScanDistance() {
         LIBERATE_MEMORY
     } STATE_T;
 
-    static STATE_T state = WAIT_FOR_INPUT;
+    static STATE_T state = OPEN_FILE;
 
     // Constantes del escáner
     static float centerDistance = 10.3f;
@@ -122,7 +126,7 @@ void processScanDistance() {
                 break;
 
             case R_I:
-                if(raw >= MAX_ROWS){
+                if(row >= MAX_ROWS){
                     rows = row;
                     cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
                     i= 0;
@@ -137,7 +141,7 @@ void processScanDistance() {
                     j = 0;
                     state = R_J;
                 } else {
-                        j++;
+                        i++;
                         state = LOAD_R;
                 }
                 break;
@@ -148,6 +152,8 @@ void processScanDistance() {
                 }
                 if(j < len){
                     r[row][j] = centerDistance - raw[start + j];
+                    j++;
+                    state = R_J;
                 }
                 else{
                     ++row;
