@@ -74,12 +74,23 @@ void surf2stl(const char *filename, float **x, float **y, float **z, int rows, i
             float p3[3] = {x[i+1][j+1], y[i+1][j+1], z[i+1][j+1]};
             write_facet(f, p1, p2, p3, mode);
             ++nfacets;
-
             float p4[3] = {x[i+1][j], y[i+1][j], z[i+1][j]};
             write_facet(f, p3, p4, p1, mode);
             ++nfacets;
+            if (j == cols - 2) {
+                float p01[3] = {x[i][0], y[i][0], z[i][0]};
+                float p02[3] = {x[i+1][0], y[i+1][0], z[i+1][0]};
+                write_facet(f, p2, p01, p02, mode);
+                ++nfacets;
+                write_facet(f, p02, p3, p2, mode);
+                ++nfacets;
+            }
+
         }
+
     }
+
+
 
     if (strcmp(mode, "ascii") == 0) {
         fprintf(f, "endsolid ascii\n");

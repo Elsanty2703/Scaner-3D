@@ -35,7 +35,7 @@ void processScanDistance(const char *inputFilename , float zDelta) {
     static STATE_T state = OPEN_FILE;
 
     // Constantes del escáner
-    static float centerDistance = 20.0f;
+    static float centerDistance = 14.0f;
     static float maxDistance = 26.5f;
     static float minDistance = 0.0f;
     // Variables de trabajo
@@ -112,8 +112,8 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                 if (i < count) {
                     state = R_I;
                 } else {
-                    rows = row;
-                    cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
+                    rows = row ;
+                    cols = (start > 0 && row > 0) ? (start / row) - 1: 0;
                     i= 0;
                     j = 0;
                     x = calloc(rows , sizeof(float *));
@@ -136,13 +136,15 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                     state = CREATE_XYZ;
                 }
                 if(raw[i] == 9999) {
+
                     len = i - start;
+                    printf("i %d: start = %d\n", i, start);
                     j = 0;
                     i++;
                     state = R_J;
                 } else {
                     i++;
-                        state = LOAD_R;
+                    state = LOAD_R;
                 }
                 break;
 
@@ -154,9 +156,10 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                     r[row][j] = centerDistance - raw[start + j];
                     j++;
                     state = R_J;
+                  //  printf("row %d: len = %d\n", row, len);
                 }
                 else{
-                    start = i + 1;
+                    start = i ;
                     ++row;
                     state = R_I;
                 }
@@ -186,16 +189,15 @@ void processScanDistance(const char *inputFilename , float zDelta) {
                         y[i][j] = NAN;
                         z[i][j] = NAN;
                         printf("radius: %f \n",radius);
+                       // printf("x: %f \n",x[i][j]);
+                       // printf("y: %f \n",y[i][j]);
+                       // printf("z: %f \n",z[i][j]);
                     } else {
                         float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
                         x[i][j] = radius * cosf(theta);
                         y[i][j] = radius * sinf(theta);
                         z[i][j] = i * zDelta;
                     }
-                    printf("x: %f \n",x[i][j]);
-                    printf("y: %f \n",y[i][j]);
-                    printf("z: %f \n",z[i][j]);
-
                     ++j;
                     state = LOAD_XYZ;
                 }
