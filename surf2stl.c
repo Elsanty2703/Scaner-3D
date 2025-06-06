@@ -68,27 +68,21 @@ void surf2stl(const char *filename, float **x, float **y, float **z, int rows, i
     }
 
     for (i = 0; i < rows - 1; ++i) {
-        for (j = 0; j < cols - 1; ++j) {
-            float p1[3] = {x[i][j], y[i][j], z[i][j]};
-            float p2[3] = {x[i][j+1], y[i][j+1], z[i][j+1]};
-            float p3[3] = {x[i+1][j+1], y[i+1][j+1], z[i+1][j+1]};
-            write_facet(f, p1, p2, p3, mode);
-            ++nfacets;
-            float p4[3] = {x[i+1][j], y[i+1][j], z[i+1][j]};
-            write_facet(f, p3, p4, p1, mode);
-            ++nfacets;
-            if (j == cols - 2) {
-                float p01[3] = {x[i][0], y[i][0], z[i][0]};
-                float p02[3] = {x[i+1][0], y[i+1][0], z[i+1][0]};
-                write_facet(f, p2, p01, p02, mode);
-                ++nfacets;
-                write_facet(f, p02, p3, p2, mode);
-                ++nfacets;
-            }
+    for (j = 0; j < cols; ++j) {
+        int j_next = (j + 1) % cols;
 
-        }
+        float p1[3] = {x[i][j], y[i][j], z[i][j]};
+        float p2[3] = {x[i][j_next], y[i][j_next], z[i][j_next]};
+        float p3[3] = {x[i+1][j_next], y[i+1][j_next], z[i+1][j_next]};
+        write_facet(f, p1, p2, p3, mode);
+        ++nfacets;
 
+        float p4[3] = {x[i+1][j], y[i+1][j], z[i+1][j]};
+        write_facet(f, p3, p4, p1, mode);
+        ++nfacets;
     }
+}
+
 
 
 
