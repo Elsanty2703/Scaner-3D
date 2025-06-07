@@ -11,10 +11,10 @@ const int DIR_PIN2  = 14; // DIR*/
 typedef struct{
     unsigned long prev;
     unsigned long tau;
-    int STEP, EN;
+    int STEP, EN, DIR;
 }pulse;
 
-typedef enum{SCAN, ROTATE, ROTATE_ON, UP, UP_ON}MOTOR_STATES;
+typedef enum{SCAN, ROTATE, ROTATE_ON, UP, UP_ON, HOME, HOME_ON} MOTOR_STATES;
 typedef struct{
     MOTOR_STATES state;
     pulse m1, m2;
@@ -26,15 +26,15 @@ typedef struct{
 pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction);
 bool Rotation(pulse *state);
 
-MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l);
+MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME);
 void MotorControl(MOTOR *motor);
 
 MOTOR machine;
 
 void setup() {
-    machine.m1 = setupRotation(33,25,1, true);
-    machine.m2 = setupRotation(27,14,1, false);
-    machine = setupMotor(10, 200, 80, 200); 
+    machine.m1 = setupRotation(4, 5, 23, 5, true);
+    machine.m2 = setupRotation(15, 2, 22, 5, false);
+    machine = setupMotor(10, 100, 80, 200); 
 }
 
 void loop() {
@@ -58,11 +58,13 @@ void MotorControl(MOTOR *motor){
     switch(motor->state) {
         case SCAN:
             if(motor->count_r < motor->num_r) {
-                motor->state = ROTATE; 
+                motor->state = ROTATE;
                 motor->count = 0;
+                digitalWrite(motor->m1.EN, LOW); 
             } else if(motor->count_l < motor->num_l) {
                 motor->state = UP; 
                 motor->count = 0; 
+                digitalWrite(motor->m2.EN, LOW); 
             } 
             break;
         case ROTATE:
@@ -73,6 +75,7 @@ void MotorControl(MOTOR *motor){
                 motor->state = SCAN; // Reset to scan after rotation
                 motor->count_r++; // Increment right count
                 motor->count = 0; // Reset count
+                digitalWrite(motor->m1.EN, HIGH); // Disable motor
             }
             break;
         case ROTATE_ON:
@@ -90,6 +93,7 @@ void MotorControl(MOTOR *motor){
                 motor->count_l++; // Increment left count
                 motor->count_r = 0; // Reset right count
                 motor->count = 0; // Reset count
+                digitalWrite(motor->m2.EN, HIGH); // Disable motor
             }
             break;
         case UP_ON:
@@ -111,6 +115,7 @@ pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction
     motor.prev = millis();
     motor.STEP = step;
     motor.EN = en;
+    motor.DIR = dir;
     return motor;
 }
 
