@@ -1,226 +1,163 @@
-//quiero dormir
-//processScanDistance_mfs.c
-#include <stdio.h>
+// processScanDistance_mfs.c
+#include "processScanDistance_mfs.h"
+#include "surf2stl.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include "surf2stl.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-#define MAX_ROWS 500
-#define MAX_COLS 500
-#define MAX_RAW 250500
+static float degrees_to_radians(float degrees) {
+    return degrees * M_PI / 180.0f;
+}
 
-float degrees_to_radians(float degrees) {
-        return degrees * M_PI / 180.0f;
-    }
+void processScanDistance_step(ScanData *data) {
+    switch (data->state) {
+        case OPEN_FILE:
+            data->count = data->rows = data->cols = 0;
+            data->i = data->j = data->start = data->row = 0;
+            data->file = fopen(data->inputFilename, "r");
+            if (!data->file) {
+                perror("Error abriendo archivo");
+                data->state = OPEN_FILE;
+            } else {
+                data->state = FILE_LOAD;
+            }
+            break;
 
-void processScanDistance(const char *inputFilename , float zDelta) {
-    typedef enum {
-        OPEN_FILE,
-        FILE_LOAD,
-        NEGATIVE,
-        CREATE_R,
-        LOAD_R,
-        R_I,
-        R_J,
-        CREATE_XYZ,
-        LOAD_XYZ,
-        LIBERATE_MEMORY
-    } STATE_T;
+        case FILE_LOAD:
+            if (fscanf(data->file, "%d", &data->raw[data->count]) == 1) {
+                data->count++;
+                data->state = NEGATIVE;
+            } else {
+                fclose(data->file);
+                data->state = CREATE_R;
+            }
+            break;
 
-    static STATE_T state = OPEN_FILE;
+        case NEGATIVE:
+            if (data->count < MAX_RAW) {
+                if (data->raw[data->count] < 0) {
+                    data->raw[data->count] = 0;
+                }
+                data->state = FILE_LOAD;
+            } else {
+                fclose(data->file);
+                data->state = CREATE_R;
+            }
+            break;
 
-    // Constantes del escáner
-    static float centerDistance = 14.0f;
-    static float maxDistance = 26.5f;
-    static float minDistance = 0.0f;
-    // Variables de trabajo
-    static int raw[MAX_RAW];
-    static int count = 0;
+        case CREATE_R:
+            if (data->i < MAX_ROWS) {
+                data->r[data->i] = malloc(MAX_COLS * sizeof(float));
+                data->i++;
+                data->state = CREATE_R;
+            } else {
+                data->i = 0;
+                data->state = LOAD_R;
+            }
+            break;
 
-    static float *r[MAX_ROWS];
-    static int rows = 0;
-    static int cols = 0;
+        case LOAD_R:
+            if (data->i < data->count) {
+                data->state = R_I;
+            } else {
+                data->rows = data->row;
+                data->cols = (data->start > 0 && data->row > 0) ? (data->start / data->row) - 1 : 0;
+                data->i = data->j = 0;
+                data->x = calloc(data->rows, sizeof(float *));
+                data->y = calloc(data->rows, sizeof(float *));
+                data->z = calloc(data->rows, sizeof(float *));
+                data->state = CREATE_XYZ;
+            }
+            break;
 
-    static float **x = NULL, **y = NULL, **z = NULL;
+        case R_I:
+            if (data->row >= MAX_ROWS) {
+                data->rows = data->row;
+                data->cols = (data->start > 0 && data->row > 0) ? (data->start / data->row) - 1 : 0;
+                data->i = data->j = 0;
+                data->x = calloc(data->rows, sizeof(float *));
+                data->y = calloc(data->rows, sizeof(float *));
+                data->z = calloc(data->rows, sizeof(float *));
+                data->state = CREATE_XYZ;
+                break;
+            }
 
-    static FILE *file = NULL;
-    static const char *outputFilename = "SCAN.stl";
+            if (data->raw[data->i] == 9999) {
+                data->len = data->i - data->start;
+                data->j = 0;
+                data->i++;
+                data->state = R_J;
+            } else {
+                data->i++;
+                data->state = LOAD_R;
+            }
+            break;
 
-    static int i = 0, j = 0;
-    static int start = 0, row = 0, len = 0, wait = 0;
+        case R_J:
+            if (data->len > MAX_COLS)
+                data->len = MAX_COLS;
 
+            if (data->j < data->len) {
+                data->r[data->row][data->j] = data->centerDistance - data->raw[data->start + data->j];
+                data->j++;
+                data->state = R_J;
+            } else {
+                data->start = data->i;
+                data->row++;
+                data->state = R_I;
+            }
+            break;
 
-    while (state!=LIBERATE_MEMORY) {
-        switch (state) {
+        case CREATE_XYZ:
+            if (data->i < data->rows) {
+                data->x[data->i] = calloc(data->cols, sizeof(float));
+                data->y[data->i] = calloc(data->cols, sizeof(float));
+                data->z[data->i] = calloc(data->cols, sizeof(float));
+                data->j = 0;
+                data->state = LOAD_XYZ;
+            } else {
+                surf2stl(data->outputFilename, data->x, data->y, data->z, data->rows, data->cols, "binary");
+                data->state = LIBERATE_MEMORY;
+            }
+            break;
 
-            case OPEN_FILE:
-                count = 0;
-                rows = 0;
-                cols = 0;
-                i = j = start = row = 0;
-                file = fopen(inputFilename, "r");
-                if (!file) {
-                    perror("Error abriendo archivo");
-                    state = OPEN_FILE;
+        case LOAD_XYZ:
+            if (data->j < data->cols) {
+                float radius = data->r[data->i][data->j];
+                if (radius < data->minDistance || radius > data->maxDistance) {
+                    data->x[data->i][data->j] = NAN;
+                    data->y[data->i][data->j] = NAN;
+                    data->z[data->i][data->j] = NAN;
                 } else {
-                    state = FILE_LOAD;
+                    float theta = degrees_to_radians(360.0f - (360.0f * data->j / data->cols));
+                    data->x[data->i][data->j] = radius * cosf(theta);
+                    data->y[data->i][data->j] = radius * sinf(theta);
+                    data->z[data->i][data->j] = data->i * data->zDelta;
                 }
-                break;
+                data->j++;
+                data->state = LOAD_XYZ;
+            } else {
+                data->i++;
+                data->state = CREATE_XYZ;
+            }
+            break;
 
-            case FILE_LOAD:
-                if (fscanf(file, "%d", &raw[count]) == 1) {
-                    count++;
-                    state = NEGATIVE;
-                } else {
-                    fclose(file);
-                    state = CREATE_R;
-                }
-                break;
-
-            case NEGATIVE:
-                if (count < MAX_RAW) {
-                    if (raw[count] < 0) {
-                        raw[count] = 0;
-                        state = FILE_LOAD;
-                    } else {
-                        state = FILE_LOAD;
-                    }
-                } else {
-                    fclose(file);
-                    state = CREATE_R;
-                }
-                break;
-
-            case CREATE_R:
-                if(i<MAX_ROWS) {
-                    r[i] = (float*)malloc(MAX_COLS * sizeof(float));
-                    i++;
-                    state = CREATE_R;
-
-                } else {
-                    i=0;
-                    state = LOAD_R;
-                }
-                break;
-
-            case LOAD_R:
-                if (i < count) {
-                    state = R_I;
-                } else {
-                    rows = row ;
-                    cols = (start > 0 && row > 0) ? (start / row) - 1: 0;
-                    i= 0;
-                    j = 0;
-                    x = calloc(rows , sizeof(float *));
-                    y = calloc(rows , sizeof(float *));
-                    z = calloc(rows , sizeof(float *));
-                    state = CREATE_XYZ;
-                }
-                break;
-
-            case R_I:
-                if(row >= MAX_ROWS){
-                    rows = row;
-                    cols = (start > 0 && row > 0) ? (start / row) - 1 : 0;
-                    i= 0;
-                    j = 0;
-                    x = calloc(rows, sizeof(float *));
-                    y = calloc(rows, sizeof(float *));
-                    z = calloc(rows, sizeof(float *));
-
-                    state = CREATE_XYZ;
-                }
-                if(raw[i] == 9999) {
-
-                    len = i - start;
-                    printf("i %d: start = %d\n", i, start);
-                    j = 0;
-                    i++;
-                    state = R_J;
-                } else {
-                    i++;
-                    state = LOAD_R;
-                }
-                break;
-
-            case R_J:
-                if(len > MAX_COLS) {
-                    len = MAX_COLS;
-                }
-                if(j < len){
-                    r[row][j] = centerDistance - raw[start + j];
-                    j++;
-                    state = R_J;
-                  //  printf("row %d: len = %d\n", row, len);
-                }
-                else{
-                    start = i ;
-                    ++row;
-                    state = R_I;
-                }
-                break;
-
-            case CREATE_XYZ:
-
-                if(i < rows){
-                    x[i] = calloc(cols, sizeof(float *));
-                    y[i] = calloc(cols, sizeof(float *));
-                    z[i] = calloc(cols, sizeof(float *));
-                    j = 0;
-                    state = LOAD_XYZ;
-
-                } else {
-
-                    surf2stl(outputFilename, x, y, z, rows, cols, "binary");
-                    state = LIBERATE_MEMORY;
-                }
-                break;
-
-            case LOAD_XYZ:
-                if(j < cols) {
-                    float radius = r[i][j];
-                    if (radius < minDistance || radius > maxDistance) {
-                        x[i][j] = NAN;
-                        y[i][j] = NAN;
-                        z[i][j] = NAN;
-                        printf("radius: %f \n",radius);
-                       // printf("x: %f \n",x[i][j]);
-                       // printf("y: %f \n",y[i][j]);
-                       // printf("z: %f \n",z[i][j]);
-                    } else {
-                        float theta = degrees_to_radians(360.0f - (360.0f * j / cols));
-                        x[i][j] = radius * cosf(theta);
-                        y[i][j] = radius * sinf(theta);
-                        z[i][j] = i * zDelta;
-                    }
-                    ++j;
-                    state = LOAD_XYZ;
-                }
-                else{
-                    ++i;
-                    state = CREATE_XYZ;
-                }
-                break;
-
-            case LIBERATE_MEMORY:
-                for (i = 0; i < rows; i++) {
-                    free(x[i]);
-                    free(y[i]);
-                    free(z[i]);
-                    free(r[i]);
-                }
-                free(x);
-                free(y);
-                free(z);
-                printf("STL generado y memoria liberada correctamente.\n");
-                state = OPEN_FILE;
-                break;
-
-        }
+        case LIBERATE_MEMORY:
+            for (int i = 0; i < data->rows; i++) {
+                free(data->x[i]);
+                free(data->y[i]);
+                free(data->z[i]);
+                free(data->r[i]);
+            }
+            free(data->x);
+            free(data->y);
+            free(data->z);
+            printf("STL generado y memoria liberada correctamente.\n");
+            data->state = OPEN_FILE;
+            break;
     }
 }

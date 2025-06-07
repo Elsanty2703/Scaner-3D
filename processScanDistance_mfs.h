@@ -1,21 +1,61 @@
-#ifndef PROCESS_SCAN_DISTANCE_H
-#define PROCESS_SCAN_DISTANCE_H
+// processScanDistance_mfs.h
+#ifndef PROCESS_SCAN_DISTANCE_MFS_H
+#define PROCESS_SCAN_DISTANCE_MFS_H
 
 #include <stdio.h>
-
-// Definición de M_PI si no existe
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
 
 #define MAX_ROWS 500
 #define MAX_COLS 500
 #define MAX_RAW 250500
 
-// Convierte grados a radianes
-float degrees_to_radians(float degrees);
+typedef enum {
+    OPEN_FILE,
+    FILE_LOAD,
+    NEGATIVE,
+    CREATE_R,
+    LOAD_R,
+    R_I,
+    R_J,
+    CREATE_XYZ,
+    LOAD_XYZ,
+    LIBERATE_MEMORY
+} ScanState;
 
-// Procesa el archivo de distancias para generar un archivo STL
-void processScanDistance(const char *inputFilename, float zDelta);
+typedef struct {
+    // Estados
+    ScanState state;
 
-#endif // PROCESS_SCAN_DISTANCE_H
+    // Parámetros del escáner
+    float centerDistance;
+    float maxDistance;
+    float minDistance;
+    float zDelta;
+
+    // Archivos
+    FILE *file;
+    const char *inputFilename;
+    const char *outputFilename;
+
+    // Datos RAW
+    int raw[MAX_RAW];
+    int count;
+
+    // Matrices de datos
+    float *r[MAX_ROWS];
+    float **x;
+    float **y;
+    float **z;
+
+    // Dimensiones
+    int rows;
+    int cols;
+
+    // Contadores
+    int i, j;
+    int start, row, len;
+
+} ScanData;
+
+void processScanDistance_step(ScanData *data);
+
+#endif

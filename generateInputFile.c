@@ -4,19 +4,36 @@
 #include <stdlib.h>
 #include "generateInputFile.h"
 
-void generateInputFile(const int **matriz, int filas, int columnas, const char *filename) {
-    FILE *file = fopen(filename, "w");
-    if (!file) {
-        perror("Error al abrir el archivo para escritura");
-        exit(EXIT_FAILURE);
-    }
-
-    for (int i = 0; i < filas; ++i) {
-        for (int j = 0; j < columnas; ++j) {
-            fprintf(file, "%d ", matriz[i][j]);
+void generateInputFile(FileData *fileData) {
+    switch (fileData->state) {
+        case FOPEN:
+            fileData->file = fopen(fileData->filename, "w");
+        if (!fileData->file) {
+            perror("Esperando txt");
         }
-        fprintf(file, "9999 ");  // Separador de fila, como en los datos del escáner
-    }
+        fileData->state = ROWS;
+        break;
 
-    fclose(file);
+        case ROWS:
+            if (fileData->i < fileData->rows) {
+                fileData->j = 0;
+                fileData->state = COLS;
+            } else {
+                fclose(fileData->file);
+                fileData->file = NULL;
+                fileData->state = FOPEN; // Fin
+            }
+        break;
+
+        case COLS:
+            if (fileData->j < fileData->cols) {
+                fprintf(fileData->file, "%d ", fileData->matriz[fileData->i][fileData->j]);
+                fileData->j++;
+            } else {
+                fprintf(fileData->file, "9999 ");
+                fileData->i++;
+                fileData->state = ROWS;
+            }
+        break;
+    }
 }

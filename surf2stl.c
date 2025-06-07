@@ -4,17 +4,6 @@
 #include <string.h>
 #include <math.h>
 
-void cross_product(float *v1, float *v2, float *result) {
-    result[0] = v1[1]*v2[2] - v1[2]*v2[1];
-    result[1] = v1[2]*v2[0] - v1[0]*v2[2];
-    result[2] = v1[0]*v2[1] - v1[1]*v2[0];
-}
-
-void normalize(float *v) {
-    float norm = sqrtf(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    if (norm == 0) return;
-    v[0] /= norm; v[1] /= norm; v[2] /= norm;
-}
 
 void write_facet(FILE *f, float *p1, float *p2, float *p3, const char *mode) {
     float v1[3], v2[3], normal[3];
@@ -24,8 +13,12 @@ void write_facet(FILE *f, float *p1, float *p2, float *p3, const char *mode) {
         v2[i] = p3[i] - p1[i];
     }
 
-    cross_product(v1, v2, normal);
-    normalize(normal);
+    normal[0] = v1[1]*v2[2] - v1[2]*v2[1];
+    normal[1] = v1[2]*v2[0] - v1[0]*v2[2];
+    normal[2] = v1[0]*v2[1] - v1[1]*v2[0];
+
+    float norm = sqrtf(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
+    if (norm != 0) normal[0] /= norm; normal[1] /= norm; normal[2] /= norm; //normalizar
 
     if (strcmp(mode, "ascii") == 0) {
         fprintf(f, "facet normal %.7E %.7E %.7E\n", normal[0], normal[1], normal[2]);
