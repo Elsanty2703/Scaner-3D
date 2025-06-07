@@ -49,7 +49,7 @@ void processScanDistance(const char *inputFilename , float zDelta) {
     static float **x = NULL, **y = NULL, **z = NULL;
 
     static FILE *file = NULL;
-    static const char *outputFilename = "output.stl";
+    static const char *outputFilename = "SCAN.stl";
 
     static int i = 0, j = 0;
     static int start = 0, row = 0, len = 0, wait = 0;
