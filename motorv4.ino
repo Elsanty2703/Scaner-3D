@@ -1,39 +1,131 @@
+/*// Pines conectados al motor 1
+const int EN_PIN1   = 32; // ENABLE
+const int STEP_PIN1 = 33; // STEP
+const int DIR_PIN1  = 25; // DIR
+
+// Pines conectados al motor 2
+const int EN_PIN2   = 26; // ENABLE
+const int STEP_PIN2 = 27; // STEP
+const int DIR_PIN2  = 14; // DIR*/
+
 typedef struct{
     unsigned long prev;
     unsigned long tau;
     int STEP, EN, DIR;
 }pulse;
 
+typedef enum{SCAN, ROTATE, ROTATE_ON, UP, UP_ON, HOME, HOME_ON} MOTOR_STATES;
+typedef struct{
+    MOTOR_STATES state;
+    pulse m1, m2;
+    int step_r, step_l;
+    int num_r, num_l;
+    int MAX, HOME; // pin numbers for max and home switches
+    bool max_reached; // flag for max position
+    int count_r, count_l, count; // counts for right and left steps
+}MOTOR;
+
 pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction);
 bool Rotation(pulse *state);
 
-void setup() {
-    m1 = setupRotation(4, 5, 23, 5, true);
-    m2 = setupRotation(15, 2, 22, 5, false);
-}
+MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME);
+void MotorControl(MOTOR *motor);
 
-bool a = false, b = false;
+MOTOR machine;
+
+void setup() {
+    machine.m1 = setupRotation(4, 5, 23, 2, false);
+    machine.m2 = setupRotation(15, 2, 22, 2, false);
+    machine = setupMotor(20, 200, 80, 200); 
+    pinMode(18, OUTPUT);
+    pinMode(19, OUTPUT);
+    pinMode(21, OUTPUT);
+    digitalWrite(18, LOW);
+    digitalWrite(19, HIGH);
+    digitalWrite(21, HIGH);
+}
 
 void loop() {
-    if(millis() % 1000 < 500 && !a) {
-        a = Rotation(&m1);
-    } else if(millis() % 1000 >= 500) {
-        a = false; // Reinicia bandera cuando salimos del ciclo
-    }
-
-    if(millis() % 1000 >= 500 && !b) {
-        b = Rotation(&m2);
-    } else if(millis() % 1000 < 500) {
-        b = false; // Reinicia bandera cuando salimos del ciclo
-    }
+    MotorControl(&machine);
 }
 
+MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME){
+    MOTOR motor;
+    motor.state = SCAN;
+    motor.step_r = step_r;
+    motor.step_l = step_l;
+    motor.num_r = num_r;
+    motor.num_l = num_l;
+    motor.count_r = 0;
+    motor.count_l = 0;
+    motor.count = 0;
+    motor.MAX = MAX;
+    motor.HOME = HOME;
+    motor.max_reached = false; // Initialize max position flag
+    return motor;
+}
+
+void MotorControl(MOTOR *motor){
+    switch(motor->state) {
+        case SCAN:
+            if(){
+
+            } else if(digitalRead(motor->MAX) == HIGH || motor->max_reached) {
+                motor->max_reached = true;
+                motor->state = HOME; // Move to home position
+            } else if(motor->count_r < motor->num_r) {
+                motor->state = ROTATE;
+                motor->count = 0;
+                //digitalWrite(motor->m1.EN, LOW); 
+            } else if(motor->count_l < motor->num_l) {
+                motor->state = UP; 
+                motor->count = 0; 
+                //digitalWrite(motor->m2.EN, LOW); 
+            } 
+            break;
+        case ROTATE:
+            if(motor->count < motor->step_r){
+                motor->state = ROTATE_ON; // Start rotating
+                motor->m1.prev = millis();
+            } else {
+                motor->state = SCAN; // Reset to scan after rotation
+                motor->count_r++; // Increment right count
+                motor->count = 0; // Reset count
+                //digitalWrite(motor->m1.EN, HIGH); // Disable motor
+            }
+            break;
+        case ROTATE_ON:
+            if(Rotation(&motor->m1)){
+                motor->state = ROTATE;
+                motor->count++;
+            }
+            break;
+        case UP:
+            if(motor->count < motor->step_l){
+                motor->state = UP_ON; // Start rotating
+                motor->m2.prev = millis();
+            } else {
+                motor->state = SCAN; // Reset to scan after rotation
+                motor->count_l++; // Increment left count
+                motor->count_r = 0; // Reset right count
+                motor->count = 0; // Reset count
+                //digitalWrite(motor->m2.EN, HIGH); // Disable motor
+            }
+            break;
+        case UP_ON:
+            if(Rotation(&motor->m2)){
+                motor->state = UP;
+                motor->count++;
+            } 
+            break;
+    }
+}
 
 pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction){
     pinMode(step, OUTPUT);
     pinMode(dir, OUTPUT);
     digitalWrite(dir, direction ? HIGH : LOW);
-    digitalWrite(en, HIGH);
+    digitalWrite(en, LOW);
     pulse motor;
     motor.tau = tau;
     motor.prev = millis();
@@ -44,16 +136,13 @@ pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction
 }
 
 bool Rotation(pulse *motor){
-    digitalWrite(motor->EN, LOW); // Enable the motor
     if((millis()-motor->prev) < motor->tau / 2){
         digitalWrite(motor->STEP, HIGH);
     } else if((millis()-motor->prev) < motor->tau){
         digitalWrite(motor->STEP, LOW);
     } else {
-        digitalWrite(motor->EN, HIGH); // Disable the motor
         motor->prev += motor->tau;  // mejor que reiniciar con `millis()`
         return true;
     }
-    digitalWrite(motor->EN, HIGH); // Disable the motor
     return false;
 }
