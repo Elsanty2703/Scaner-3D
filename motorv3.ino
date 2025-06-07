@@ -32,9 +32,15 @@ void MotorControl(MOTOR *motor);
 MOTOR machine;
 
 void setup() {
-    machine.m1 = setupRotation(4, 5, 23, 5, true);
-    machine.m2 = setupRotation(15, 2, 22, 5, false);
-    machine = setupMotor(10, 100, 80, 200); 
+    machine.m1 = setupRotation(4, 5, 23, 2, false);
+    machine.m2 = setupRotation(15, 2, 22, 2, false);
+    machine = setupMotor(20, 200, 80, 200); 
+    pinMode(18, OUTPUT);
+    pinMode(19, OUTPUT);
+    pinMode(21, OUTPUT);
+    digitalWrite(18, LOW);
+    digitalWrite(19, HIGH);
+    digitalWrite(21, HIGH);
 }
 
 void loop() {
@@ -57,14 +63,16 @@ MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l){
 void MotorControl(MOTOR *motor){
     switch(motor->state) {
         case SCAN:
-            if(motor->count_r < motor->num_r) {
+            if(){
+
+            } else if(motor->count_r < motor->num_r) {
                 motor->state = ROTATE;
                 motor->count = 0;
-                digitalWrite(motor->m1.EN, LOW); 
+                //digitalWrite(motor->m1.EN, LOW); 
             } else if(motor->count_l < motor->num_l) {
                 motor->state = UP; 
                 motor->count = 0; 
-                digitalWrite(motor->m2.EN, LOW); 
+                //digitalWrite(motor->m2.EN, LOW); 
             } 
             break;
         case ROTATE:
@@ -75,7 +83,7 @@ void MotorControl(MOTOR *motor){
                 motor->state = SCAN; // Reset to scan after rotation
                 motor->count_r++; // Increment right count
                 motor->count = 0; // Reset count
-                digitalWrite(motor->m1.EN, HIGH); // Disable motor
+                //digitalWrite(motor->m1.EN, HIGH); // Disable motor
             }
             break;
         case ROTATE_ON:
@@ -93,7 +101,7 @@ void MotorControl(MOTOR *motor){
                 motor->count_l++; // Increment left count
                 motor->count_r = 0; // Reset right count
                 motor->count = 0; // Reset count
-                digitalWrite(motor->m2.EN, HIGH); // Disable motor
+                //digitalWrite(motor->m2.EN, HIGH); // Disable motor
             }
             break;
         case UP_ON:
@@ -109,7 +117,7 @@ pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction
     pinMode(step, OUTPUT);
     pinMode(dir, OUTPUT);
     digitalWrite(dir, direction ? HIGH : LOW);
-    digitalWrite(en, HIGH);
+    digitalWrite(en, LOW);
     pulse motor;
     motor.tau = tau;
     motor.prev = millis();
@@ -120,16 +128,13 @@ pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction
 }
 
 bool Rotation(pulse *motor){
-    digitalWrite(motor->EN, LOW); // Enable the motor
     if((millis()-motor->prev) < motor->tau / 2){
         digitalWrite(motor->STEP, HIGH);
     } else if((millis()-motor->prev) < motor->tau){
         digitalWrite(motor->STEP, LOW);
     } else {
-        digitalWrite(motor->EN, HIGH); // Disable the motor
         motor->prev += motor->tau;  // mejor que reiniciar con `millis()`
         return true;
     }
-    digitalWrite(motor->EN, HIGH); // Disable the motor
     return false;
 }
