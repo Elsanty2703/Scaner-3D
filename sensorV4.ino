@@ -86,16 +86,18 @@ int SensorLeyendo();
 double LaserDistancia();
 int ScannerFinalizado();
 void Sensor_void();
-Sensor sensor = setupSensor(5, 4, 1023, 100);
+Sensor sensor;
 
 void Musica_void();
-Musica musica = setupMusica(6);
+Musica musica;
 
 void setup() {
   Serial.begin(9600); // Inicia la comunicación serial a 9600 bps
-  
-  pinMode(sensor.buzzerPin, INPUT);
-  pinMode(sensor.buzzerPin, INPUT);
+  sensor = setupSensor(5, 4, 1023, 100);
+  musica = setupMusica(6);
+
+  pinMode(sensor.buzzerPin, INPUT_PULLDOWN);
+  pinMode(sensor.buzzerBotton, INPUT_PULLDOWN);
   pinMode(musica.buzzerPin, OUTPUT);
 }
 
@@ -107,9 +109,9 @@ void loop() {
 void Sensor_void() {
   switch(sensor.estadoActual){
 
-    case INICIO:
+      case INICIO:
 
-    break;
+      break;
 
       case MIDIENDO:
         if(sensor.k < sensor.noSamples){
