@@ -12,16 +12,17 @@ typedef struct{
     unsigned long prev;
     unsigned long tau;
     int STEP, EN, DIR;
+    bool dir; // direction flag
+  // true = forward, false = backward
 }pulse;
 
 typedef enum{SCAN, ROTATE, ROTATE_ON, UP, UP_ON, HOME, HOME_ON} MOTOR_STATES;
 typedef struct{
     MOTOR_STATES state;
-    pulse m1, m2;
+    pulse m1, m2, m3;
     int step_r, step_l;
     int num_r, num_l;
-    int MAX, HOME; // pin numbers for max and home switches
-    bool max_reached; // flag for max position
+    int MAX, HOME;
     int count_r, count_l, count; // counts for right and left steps
 }MOTOR;
 
@@ -34,15 +35,15 @@ void MotorControl(MOTOR *motor);
 MOTOR machine;
 
 void setup() {
-    machine.m1 = setupRotation(4, 5, 23, 2, false);
-    machine.m2 = setupRotation(15, 2, 22, 2, false);
-    machine = setupMotor(20, 200, 80, 200); 
-    pinMode(18, OUTPUT);
-    pinMode(19, OUTPUT);
-    pinMode(21, OUTPUT);
-    digitalWrite(18, LOW);
-    digitalWrite(19, HIGH);
-    digitalWrite(21, HIGH);
+    machine = setupMotor(20, 200, 80, 200, 34, 35); 
+    machine.m1 = setupRotation(17, 16, 15, 2, false);
+    machine.m2 = setupRotation(19, 18, 5, 2, false);
+    pinMode(2, OUTPUT);
+    pinMode(0, OUTPUT);
+    pinMode(4, OUTPUT);
+    digitalWrite(2, HIGH);
+    digitalWrite(0, HIGH);
+    digitalWrite(4, LOW);
 }
 
 void loop() {
@@ -61,18 +62,22 @@ MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME
     motor.count = 0;
     motor.MAX = MAX;
     motor.HOME = HOME;
-    motor.max_reached = false; // Initialize max position flag
+    pinMode(MAX, INPUT_PULLDOWN);
+    pinMode(HOME, INPUT_PULLDOWN);
     return motor;
 }
 
 void MotorControl(MOTOR *motor){
     switch(motor->state) {
         case SCAN:
-            if(){
-
-            } else if(digitalRead(motor->MAX) == HIGH || motor->max_reached) {
-                motor->max_reached = true;
+            delay(50);
+            if(digitalRead(motor->MAX)== HIGH){
+                digitalWrite(motor->m2.DIR, motor->m2.dir ? LOW : HIGH);
                 motor->state = HOME; // Move to home position
+                motor->count_r = 0; // Reset counts
+                motor->count_l = 0;
+                motor->count = 0;
+
             } else if(motor->count_r < motor->num_r) {
                 motor->state = ROTATE;
                 motor->count = 0;
@@ -118,12 +123,27 @@ void MotorControl(MOTOR *motor){
                 motor->count++;
             } 
             break;
+        case HOME:
+            if(digitalRead(motor->HOME) != HIGH){
+                motor->state = HOME_ON; // Start rotating
+                motor->m2.prev = millis();
+            } else {
+                motor->state = SCAN;
+                digitalWrite(motor->m2.DIR, motor->m2.dir ? HIGH : LOW);
+            }
+            break;
+        case HOME_ON:
+            if(Rotation(&motor->m2)){
+                motor->state = HOME;
+            } 
+            break;
     }
 }
 
 pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction){
     pinMode(step, OUTPUT);
     pinMode(dir, OUTPUT);
+    pinMode(en, OUTPUT);
     digitalWrite(dir, direction ? HIGH : LOW);
     digitalWrite(en, LOW);
     pulse motor;
@@ -132,6 +152,7 @@ pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction
     motor.STEP = step;
     motor.EN = en;
     motor.DIR = dir;
+    motor.dir = direction; // Set direction flag
     return motor;
 }
 
