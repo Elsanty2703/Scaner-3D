@@ -9,10 +9,10 @@ typedef enum {
 
 typedef struct {
     FileState state;
-    const int **matriz;
+    float **matriz;
     int rows;
     int cols;
-    const char *filename;
+    char *filename;
     int i;
     int j;
     FILE *file;

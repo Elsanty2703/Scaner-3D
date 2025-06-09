@@ -27,8 +27,9 @@ void generateInputFile(FileData *fileData) {
 
         case COLS:
             if (fileData->j < fileData->cols) {
-                fprintf(fileData->file, "%d ", fileData->matriz[fileData->i][fileData->j]);
+                fprintf(fileData->file, "%f ", fileData->matriz[fileData->i][fileData->j]);
                 fileData->j++;
+
             } else {
                 fprintf(fileData->file, "9999 ");
                 fileData->i++;

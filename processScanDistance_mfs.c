@@ -1,6 +1,6 @@
 // processScanDistance_mfs.c
 #include "processScanDistance_mfs.h"
-#include "surf2stl.h"
+    #include "surf2stl.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
@@ -13,7 +13,7 @@ static float degrees_to_radians(float degrees) {
     return degrees * M_PI / 180.0f;
 }
 
-void processScanDistance_step(ScanData *data) {
+void processScanDistance_step(ScanData *data, Surf2STLContext *ctx) {
     switch (data->state) {
         case OPEN_FILE:
             data->count = data->rows = data->cols = 0;
@@ -28,7 +28,7 @@ void processScanDistance_step(ScanData *data) {
             break;
 
         case FILE_LOAD:
-            if (fscanf(data->file, "%d", &data->raw[data->count]) == 1) {
+            if (fscanf(data->file, "%f", &data->raw[data->count]) == 1) {
                 data->count++;
                 data->state = NEGATIVE;
             } else {
@@ -120,7 +120,12 @@ void processScanDistance_step(ScanData *data) {
                 data->j = 0;
                 data->state = LOAD_XYZ;
             } else {
-                surf2stl(data->outputFilename, data->x, data->y, data->z, data->rows, data->cols, "binary");
+                ctx->x = data->x;
+                ctx->y = data->y;
+                ctx->z = data->z;
+                do {
+                    surf2stl(ctx);
+                }while(ctx->state != F_OPEN);
                 data->state = LIBERATE_MEMORY;
             }
             break;
@@ -128,15 +133,19 @@ void processScanDistance_step(ScanData *data) {
         case LOAD_XYZ:
             if (data->j < data->cols) {
                 float radius = data->r[data->i][data->j];
+               // printf("radio.%f\n",radius);
                 if (radius < data->minDistance || radius > data->maxDistance) {
-                    data->x[data->i][data->j] = NAN;
-                    data->y[data->i][data->j] = NAN;
-                    data->z[data->i][data->j] = NAN;
+                    data->x[data->i][data->j] = data->x[(data->i)-1][data->j];
+                    data->y[data->i][data->j] = data->y[(data->i)-1][data->j];
+                    data->z[data->i][data->j] = data->z[(data->i)-1][data->j];
+                    printf("radio fuera de rango.%f \n",radius);
+
                 } else {
                     float theta = degrees_to_radians(360.0f - (360.0f * data->j / data->cols));
                     data->x[data->i][data->j] = radius * cosf(theta);
                     data->y[data->i][data->j] = radius * sinf(theta);
                     data->z[data->i][data->j] = data->i * data->zDelta;
+
                 }
                 data->j++;
                 data->state = LOAD_XYZ;

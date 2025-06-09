@@ -3,6 +3,7 @@
 #define PROCESS_SCAN_DISTANCE_MFS_H
 
 #include <stdio.h>
+#include "surf2stl.h"
 
 #define MAX_ROWS 500
 #define MAX_COLS 500
@@ -33,11 +34,11 @@ typedef struct {
 
     // Archivos
     FILE *file;
-    const char *inputFilename;
-    const char *outputFilename;
+    char *inputFilename;
+    char *outputFilename;
 
     // Datos RAW
-    int raw[MAX_RAW];
+    float raw[MAX_RAW];
     int count;
 
     // Matrices de datos
@@ -56,6 +57,6 @@ typedef struct {
 
 } ScanData;
 
-void processScanDistance_step(ScanData *data);
+void processScanDistance_step(ScanData *data,Surf2STLContext *ctx);
 
 #endif
