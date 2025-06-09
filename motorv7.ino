@@ -1,9 +1,14 @@
 // motorv5.ino
 // Control de motores paso, scanner y buzzer
 // Autor: Juan Pablo Arenas
-//Motor1: Pin 17 (DIR), Pin 16 (STEP), Pin 15 (EN)
-//Motor2: Pin 19 (DIR), Pin 18 (STEP), Pin 5 (EN)
+//Motor1: Pin 23 (DIR), Pin 22 (STEP), Pin 19 (EN)
+//Motor2: Pin 18 (DIR), Pin 5 (STEP), Pin 0 (EN)
 //Buzzer: Pin 21
+//MAX: Pin 35
+//MIN: Pin 32
+//Boton1: Pin 2
+//Boton2: Pin 15
+//Interruptor: Pin 33
 
 #define SKY 100.0 // Maximum distance threshold (cm) for sensor out-of-range detection
 #define ancho 80
@@ -93,7 +98,7 @@ Musica musica;
 
 void setup() {
     Serial.begin(9600);
-    machine = setupMotor(20, 200, 80, 200, 35, 32, 2, 15, 33); 
+    machine = setupMotor(40, 400, 40, 200, 35, 32, 2, 15, 33); 
     machine.m1 = setupRotation(18, 5, 0, 2, false);
     machine.m2 = setupRotation(23, 22, 19, 2, false);
     machine.s = setupSensor(34, 4095, 50); // Sensor setup
@@ -150,12 +155,7 @@ void MotorControl(MOTOR *motor){
             } 
             break;
         case SCAN:
-            if(digitalRead(motor->INTERRUPTOR) != HIGH){
-                motor->state = WELLCOME; 
-                motor->count_r = 0;
-                motor->count_l = 0;
-                motor->count = 0;
-            } else if(motor->s.scanning) {
+            if(motor->s.scanning) {
                 motor->state = ESPERANDO;
                 motor->s.timer = millis();
                 motor->s.scanning = false; 
@@ -234,6 +234,11 @@ void MotorControl(MOTOR *motor){
                 motor->count = 0;
                 Serial.print("Baja en esperando");
 
+            } else if(digitalRead(motor->INTERRUPTOR) == HIGH){
+                motor->state = WELLCOME; 
+                motor->count_r = 0;
+                motor->count_l = 0;
+                motor->count = 0;
             } else if( millis() - motor->s.timer > 50 ){
                 motor->state = MIDIENDO;
             }
