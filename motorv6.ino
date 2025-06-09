@@ -92,8 +92,8 @@ Musica musica;
 void setup() {
     Serial.begin(9600);
     machine = setupMotor(20, 200, 80, 200, 34, 35); 
-    machine.m1 = setupRotation(17, 16, 15, 2, false);
-    machine.m2 = setupRotation(19, 18, 5, 2, false);
+    machine.m1 = setupRotation(18, 5, 0, 2, false);
+    machine.m2 = setupRotation(23, 22, 19, 2, false);
     machine.s = setupSensor(32, 4095, 50); // Sensor setup
     
     musica = setupMusica(21);
@@ -105,12 +105,12 @@ void loop() {
 }
 
 MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME){
-    pinMode(2, OUTPUT);//MS1
-    pinMode(0, OUTPUT);//MS2
-    pinMode(4, OUTPUT);//MS3
-    digitalWrite(2, HIGH);
-    digitalWrite(0, HIGH);
-    digitalWrite(4, LOW);
+    pinMode(4, OUTPUT);//MS1
+    pinMode(16, OUTPUT);//MS2
+    pinMode(17, OUTPUT);//MS3
+    digitalWrite(4, HIGH);
+    digitalWrite(16, HIGH);
+    digitalWrite(17, LOW);
     // 1 = 1/8 microstepping
     MOTOR motor;
     motor.state = SCAN;
@@ -230,7 +230,7 @@ void MotorControl(MOTOR *motor){
             break;
         case PROCESANDO:
             motor->s.analog = motor->s.sumOfSamples / motor->s.noSamples; // Calcula el promedio
-            motor->s.Voltaje = mapDouble((double)motor->s.analog, 0.0, motor->s.bits, 0.0, 5.0); // Convierte a voltaje
+            motor->s.Voltaje = mapDouble((double)motor->s.analog, 0.0, motor->s.Bits, 0.0, 5.0); // Convierte a voltaje
 
             if (motor->s.Voltaje >= 2.9) {  // 6
                 motor->s.distancia = 40.82545 * exp(-0.65439 * motor->s.Voltaje) + 0.3;  // Modelo 5
