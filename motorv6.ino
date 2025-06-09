@@ -91,10 +91,10 @@ Musica musica;
 
 void setup() {
     Serial.begin(9600);
-    machine = setupMotor(20, 200, 80, 200, 34, 35); 
+    machine = setupMotor(20, 200, 80, 200, 35, 32); 
     machine.m1 = setupRotation(18, 5, 0, 2, false);
     machine.m2 = setupRotation(23, 22, 19, 2, false);
-    machine.s = setupSensor(32, 4095, 50); // Sensor setup
+    machine.s = setupSensor(34, 4095, 50); // Sensor setup
     
     musica = setupMusica(21);
 }
@@ -138,7 +138,7 @@ void MotorControl(MOTOR *motor){
                 motor->count_r = 0; // Reset counts
                 motor->count_l = 0;
                 motor->count = 0;
-
+                Serial.print("Baja en scan");
             } else if(motor->s.scanning) {
                 motor->state = ESPERANDO;
                 motor->s.timer = millis();
@@ -210,7 +210,15 @@ void MotorControl(MOTOR *motor){
             } 
             break;
         case ESPERANDO:
-            if( millis() - motor->s.timer > 50 ){
+            if(digitalRead(motor->MAX)== HIGH){
+                digitalWrite(motor->m2.DIR, motor->m2.dir ? LOW : HIGH);
+                motor->state = HOME; // Move to home position
+                motor->count_r = 0; // Reset counts
+                motor->count_l = 0;
+                motor->count = 0;
+                Serial.print("Baja en esperando");
+
+            } else if( millis() - motor->s.timer > 50 ){
                 motor->state = MIDIENDO;
             }
             break;
