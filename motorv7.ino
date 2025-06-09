@@ -37,7 +37,7 @@ Sensor setupSensor(int pin, double bits, int noSamples);
 double mapDouble(double x, double in_min, double in_max, double out_min, double out_max);
 
 //MOTOR
-typedef enum{SCAN, ROTATE, ROTATE_ON, UP, UP_ON, HOME, HOME_ON,
+typedef enum{WELLCOME, SCAN, ROTATE, ROTATE_ON, UP, UP_ON, HOME, HOME_ON, SUBIR, SUBIR_ON, BAJAR, BAJAR_ON,
 MIDIENDO, ESPERANDO, PROCESANDO} MOTOR_STATES;
 typedef struct{
     MOTOR_STATES state;
@@ -45,10 +45,12 @@ typedef struct{
     int step_r, step_l;
     int num_r, num_l;
     int MAX, HOME;
+    int B1, B2;
+    int INTERRUPTOR;
     int count_r, count_l, count; // counts for right and left steps
     Sensor s; // Integrate sensor into motor structure
 }MOTOR;
-MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME);
+MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME, int B1, int B2, int I);
 void MotorControl(MOTOR *motor);
 MOTOR machine;
 
@@ -91,10 +93,10 @@ Musica musica;
 
 void setup() {
     Serial.begin(9600);
-    machine = setupMotor(20, 200, 80, 200, 34, 35); 
+    machine = setupMotor(20, 200, 80, 200, 35, 32, 2, 15, 33); 
     machine.m1 = setupRotation(18, 5, 0, 2, false);
     machine.m2 = setupRotation(23, 22, 19, 2, false);
-    machine.s = setupSensor(32, 4095, 50); // Sensor setup
+    machine.s = setupSensor(34, 4095, 50); // Sensor setup
     
     musica = setupMusica(21);
 }
@@ -104,7 +106,7 @@ void loop() {
     Musica_void(&musica);
 }
 
-MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME){
+MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME, int B1, int B2, int I){
     pinMode(4, OUTPUT);//MS1
     pinMode(16, OUTPUT);//MS2
     pinMode(17, OUTPUT);//MS3
@@ -113,7 +115,7 @@ MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME
     digitalWrite(17, LOW);
     // 1 = 1/8 microstepping
     MOTOR motor;
-    motor.state = SCAN;
+    motor.state = WELLCOME;
     motor.step_r = step_r;
     motor.step_l = step_l;
     motor.num_r = num_r;
@@ -123,6 +125,12 @@ MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME
     motor.count = 0;
     motor.MAX = MAX;
     motor.HOME = HOME;
+    motor.B1 = B1;
+    motor.B2 = B2;
+    motor.INTERRUPTOR = I;
+    pinMode(I, INPUT_PULLDOWN);
+    pinMode(B1, INPUT_PULLDOWN);
+    pinMode(B2, INPUT_PULLDOWN);
     pinMode(MAX, INPUT_PULLDOWN);
     pinMode(HOME, INPUT_PULLDOWN);
     return motor;
@@ -130,15 +138,23 @@ MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME
 
 void MotorControl(MOTOR *motor){
     switch(motor->state) {
-        case SCAN:
-            
-            if(digitalRead(motor->MAX)== HIGH){
+        case WELLCOME:
+            if(digitalRead(motor->INTERRUPTOR) == HIGH){
+                motor->state = SCAN; // Transition to SCAN state
+                motor->s.scanning = true; // Enable scanning
+            } else if(digitalRead(motor->B1) == HIGH){
+                motor->state = SUBIR; // Transition to UP state
+            } else if (digitalRead(motor->B2) == HIGH){
+                motor->state = BAJAR; // Transition to DOWN state
                 digitalWrite(motor->m2.DIR, motor->m2.dir ? LOW : HIGH);
-                motor->state = HOME; // Move to home position
-                motor->count_r = 0; // Reset counts
+            } 
+            break;
+        case SCAN:
+            if(digitalRead(motor->INTERRUPTOR) != HIGH){
+                motor->state = WELLCOME; 
+                motor->count_r = 0;
                 motor->count_l = 0;
                 motor->count = 0;
-
             } else if(motor->s.scanning) {
                 motor->state = ESPERANDO;
                 motor->s.timer = millis();
@@ -210,7 +226,15 @@ void MotorControl(MOTOR *motor){
             } 
             break;
         case ESPERANDO:
-            if( millis() - motor->s.timer > 50 ){
+            if(digitalRead(motor->MAX)== HIGH){
+                digitalWrite(motor->m2.DIR, motor->m2.dir ? LOW : HIGH);
+                motor->state = HOME; // Move to home position
+                motor->count_r = 0; // Reset counts
+                motor->count_l = 0;
+                motor->count = 0;
+                Serial.print("Baja en esperando");
+
+            } else if( millis() - motor->s.timer > 50 ){
                 motor->state = MIDIENDO;
             }
             break;
@@ -230,7 +254,7 @@ void MotorControl(MOTOR *motor){
             break;
         case PROCESANDO:
             motor->s.analog = motor->s.sumOfSamples / motor->s.noSamples; // Calcula el promedio
-            motor->s.Voltaje = mapDouble((double)motor->s.analog, 0.0, motor->s.bits, 0.0, 5.0); // Convierte a voltaje
+            motor->s.Voltaje = mapDouble((double)motor->s.analog, 0.0, motor->s.Bits, 0.0, 5.0); // Convierte a voltaje
 
             if (motor->s.Voltaje >= 2.9) {  // 6
                 motor->s.distancia = 40.82545 * exp(-0.65439 * motor->s.Voltaje) + 0.3;  // Modelo 5
@@ -278,7 +302,34 @@ void MotorControl(MOTOR *motor){
             motor->state = SCAN;
             motor->s.timer = millis();
             break;
-        
+        case SUBIR:
+            if(digitalRead(motor->B1) == HIGH){
+                motor->state = SUBIR_ON; // Start rotating
+                motor->m2.prev = millis();
+            } else {
+                motor->state = WELLCOME;
+                motor->s.scanning = true; 
+            }
+            break;
+        case SUBIR_ON:
+            if(Rotation(&motor->m2)){
+                motor->state = SUBIR;
+            } 
+            break;
+        case BAJAR:
+            if(digitalRead(motor->B2) == HIGH){
+                motor->state = BAJAR_ON; // Start rotating
+                motor->m2.prev = millis();
+            } else {
+                motor->state = WELLCOME;
+                digitalWrite(motor->m2.DIR, motor->m2.dir ? HIGH : LOW);
+            }
+            break;
+        case BAJAR_ON:
+            if(Rotation(&motor->m2)){
+                motor->state = BAJAR;
+            } 
+            break;
     }
 }
 
