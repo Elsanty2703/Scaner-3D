@@ -1,54 +1,42 @@
-// main.c
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
-// Archivos fuente
-#include "surf2stl.h"
+#include <unistd.h> // Para usleep
 #include "processScanDistance_mfs.h"
-#include "generateInputFile.h"  // contiene generateInputFile()
-#define ROWS 6
-#define COLS 24
+#include "distance2matrix.h"
+
+typedef enum {
+    FOPEN_G,
+    DATA_G,
+    SCAN_G,
+    END_G
+} GlobalState;
+
 int main() {
-    const char *inputFile = "input.txt";
-    const char *outputFile = "SCAN.stl";
+    char *inputFile = "input.txt";
+    char *outputFile = "SCAN.stl";
     float zDelta = 5.f;
-    int rows = ROWS, cols = COLS;
-    // Matriz de ejemplo
-    int data[ROWS][COLS] = {
-        {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
-        {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
-        {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
-        {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
-        {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
-        {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10}
+    GlobalState global_state = FOPEN_G; // ← Corregido
+
+    MatrixData matrixData = {
+        .state = DATA,
+        .matriz = NULL,
+        .rows = 0,
+        .cols = 0
     };
 
-    // Convertir a punteros para la función de entrada
-    const int *matrixPointers[6];
-    for (int i = 0; i < 6; i++) {
-        matrixPointers[i] = data[i];
-    }
     FileData fileData = {
-        .state = FOPEN,
-        .matriz = matrixPointers,
-        .rows = rows,
-        .cols = cols,
+        .matriz = NULL,
+        .rows = 0,
+        .cols = 0,
         .filename = inputFile,
         .i = 0,
         .j = 0,
         .file = NULL
     };
 
-    printf("Generando archivo de entrada...\n");
-    do {
-        generateInputFile(&fileData);
-    } while (fileData.state != FOPEN);
-
-    // Configurar la estructura de estado
     ScanData scan = {
-        .state = OPEN_FILE,
+        .state = FOPEN,
         .centerDistance = 14.0f,
         .maxDistance = 26.5f,
         .minDistance = 0.0f,
@@ -58,11 +46,51 @@ int main() {
         .file = NULL
     };
 
-    // Ejecutar la máquina de estados hasta que vuelva a OPEN_FILE (indicando que terminó)
-    do {
-        processScanDistance_step(&scan);
-    } while (scan.state != OPEN_FILE );
+    Surf2STLContext ctx = {
+        .filename = outputFile,
+        .x = NULL,
+        .y = NULL,
+        .z = NULL,
+        .rows = 0,
+        .cols = 0,
+        .i = 0,
+        .j = 0,
+        .nfacets = 0,
+        .f = NULL,
+        .file_count = 1
+    };
 
-    printf("Proceso completo.\n");
+
+    // Máquina de estados
+    while (1) {
+        switch (global_state) {
+            case FOPEN_G:
+                printf("Start...\n");
+                global_state = DATA_G;
+                break;
+
+            case DATA_G:
+                Distance2matrix(&matrixData);
+                if (matrixData.rows >= 2) {
+                    global_state = SCAN_G;
+                }
+
+                break;
+
+            case SCAN_G:
+
+                processScanDistance_step(&scan, &ctx, &fileData, &matrixData);
+                global_state = DATA_G;
+
+
+            break;
+
+            default:
+                fprintf(stderr, "Estado no reconocido\n");
+                global_state = END_G;
+                break;
+        }
+    }
+
     return 0;
 }

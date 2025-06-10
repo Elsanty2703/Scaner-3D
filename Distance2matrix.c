@@ -6,82 +6,86 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
 #include "processScanDistance_mfs.h"
 
 #define ESPERANDO_LECTURA 6969.0f
+
 // Funciones externas (deben estar definidas en otro archivo)
 extern float sensorgamboa();   // Devuelve un float con el dato leído
 extern int nuevaFila();        // Devuelve 1 si se debe cambiar de fila
 
 void Distance2matrix(MatrixData *data) {
-
     float **matriz = data->matriz;
-    int fila = data->rows;
-    int columna = data->cols;
-switch (data->state) {
 
-    case DATA:
-
-        // Asegurar al menos una fila inicial
-        if (matriz == NULL) {
-            data->matriz = malloc(sizeof(float*));
-            data->matriz[0] = NULL;
-            matriz = data->matriz; // <- ACTUALIZA
-            data->rows = 0;
-            data->cols = 0;
-        }
-        float lectura = sensorgamboa();
-
-        if (lectura == ESPERANDO_LECTURA) {
-            data->state = N_ROWS;
-        }
-        else {
-            // Agregar valor a la fila actual
-            columna++;
-            float* nuevaFilaDatos = realloc(matriz[fila], columna * sizeof(float));
-            if (nuevaFilaDatos == NULL) {
-                // Error en realloc
-                fprintf(stderr, "Error al reasignar memoria para fila %d\n", fila);
-                exit(EXIT_FAILURE);
-            }
-            matriz[fila] = nuevaFilaDatos;
-            matriz[fila][columna - 1] = lectura;
-
-            data->cols=columna;
-            data->matriz = matriz;
-            data->state = DATA;
-        }
-
-        break;
-        case N_ROWS:
-            // Cambio de fila
-                if (nuevaFila()) {
-                    fila++;
-
-                    matriz = realloc(matriz, (fila + 1) * sizeof(float*));
-                    if (matriz == NULL) {
-                        fprintf(stderr, "Error al reasignar memoria para matriz\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    matriz[fila] = NULL;
-                    columna = 0;
-                    data->rows = fila ;
-                    data->cols_ult = data->cols;
-                    data->cols = 0;
-                    data->state = DATA;
-                    data->matriz = matriz;
+    switch (data->state) {
+        case DATA: {
+            // Inicialización si es la primera vez
+            if (matriz == NULL) {
+                data->rows = 0;
+                data->cols = 0;
+                data->cols_ult = 0;
+                data->matriz = malloc(sizeof(float*));
+                data->cols_por_fila = malloc(sizeof(int));
+                if (!data->matriz || !data->cols_por_fila) {
+                    fprintf(stderr, "Error al asignar memoria inicial para matriz o cols_por_fila\n");
+                    exit(EXIT_FAILURE);
                 }
-            else {
+                data->matriz[0] = NULL;
+                matriz = data->matriz;
+            }
+
+            float lectura = sensorgamboa();
+
+            if (lectura == ESPERANDO_LECTURA) {
+                data->state = N_ROWS;
+            } else {
+                int fila = data->rows;
+                int nueva_columna = data->cols + 1;
+
+                float* nuevaFilaDatos = realloc(matriz[fila], nueva_columna * sizeof(float));
+                if (!nuevaFilaDatos) {
+                    fprintf(stderr, "Error en realloc para fila Distance2Matrix %d\n", fila);
+                    exit(EXIT_FAILURE);
+                }
+
+                matriz[fila] = nuevaFilaDatos;
+                matriz[fila][nueva_columna - 1] = lectura;
+                data->cols = nueva_columna;
+                data->cols_por_fila[data->rows] = data->cols;
+                data->matriz = matriz;
+            }
+            break;
+        }
+
+        case N_ROWS: {
+            if (nuevaFila()) {
+                int nueva_fila = data->rows + 1;
+                float **newMatriz = realloc(matriz, (nueva_fila + 1) * sizeof(float*));
+                // Ampliar cols_por_fila para una fila más
+                int *newColsPorFila = realloc(data->cols_por_fila, (nueva_fila + 1) * sizeof(int));
+                if (!newMatriz || !newColsPorFila) {
+                    fprintf(stderr, "Error al reasignar memoria para cols_por_fila\n");
+                    exit(EXIT_FAILURE);
+                }
+                data->cols_por_fila = newColsPorFila;
+
+                newMatriz[nueva_fila] = NULL;
+
+                data->matriz = newMatriz;
+                data->cols_por_fila = newColsPorFila;
+
+                data->rows = nueva_fila;
+                data->cols_ult = data->cols;
+                data->cols = 0;
+                data->state = DATA;
+            } else {
                 data->state = DATA;
             }
-
             break;
-    default:
-        fprintf(stderr, "Estado desconocido\n");
-    break;
+        }
 
-
-
-}
+        default:
+            fprintf(stderr, "Estado desconocido\n");
+            break;
+    }
 }

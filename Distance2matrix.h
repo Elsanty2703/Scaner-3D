@@ -12,9 +12,10 @@ typedef enum {
 
 typedef struct {
     MatrixState state;
-    const float **matriz;
+    float **matriz;
     int rows;
     int cols;
+    int *cols_por_fila;  // ← NUEVO: columnas reales por fila
     int cols_ult;
 } MatrixData;
 
