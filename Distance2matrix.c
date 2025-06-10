@@ -62,7 +62,7 @@ void Distance2matrix(MatrixData *data) {
                 data->cols_por_fila[data->rows] = data->cols;
                 data->matriz = matriz;
                 data->contador++;  // Aumenta contador
-                printf("Distancia guarda:\n", lectura);
+                printf("Distancia guarda:\n %f", lectura);
                 if (data->contador >= 80) {
                     data->state = N_ROWS;
                     data->contador = 0;  // Reinicia contador

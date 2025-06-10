@@ -88,7 +88,7 @@ int main() {
 
                 processScanDistance_step(&scan, &ctx, &fileData, &matrixData);
                 global_state = DATA_G;
-                if (scan.state==FOPEN() && matrixData.rows == 79) {
+                if (scan.state==FOPEN && matrixData.rows == 79) {
                     global_state = END_G;
                 }
 
