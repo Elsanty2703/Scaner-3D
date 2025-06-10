@@ -1,6 +1,7 @@
 //
 // Created by User on 8/06/2025.
 //
+// Author Thomas Santiago Ramirez Moreno
 
 #ifndef DISTANCE2MATRIX_H
 #define DISTANCE2MATRIX_H

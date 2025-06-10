@@ -1,7 +1,5 @@
+// Author Thomas Santiago Ramirez Moreno
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h> // Para usleep
 #include "processScanDistance_mfs.h"
 #include "distance2matrix.h"
 

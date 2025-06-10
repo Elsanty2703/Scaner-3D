@@ -1,4 +1,5 @@
 // processScanDistance_mfs.h
+// Author Thomas Santiago Ramirez Moreno
 #ifndef PROCESS_SCAN_DISTANCE_MFS_H
 #define PROCESS_SCAN_DISTANCE_MFS_H
 

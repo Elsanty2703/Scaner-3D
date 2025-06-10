@@ -1,6 +1,7 @@
 //
 // Created by User on 8/06/2025.
 //
+// Author Thomas Santiago Ramirez Moreno
 
 #include "distance2matrix.h"
 #include <stdlib.h>
