@@ -5,12 +5,12 @@
 
 // Pines  (ESP32)  pueden cambiar
 
-#define OLED_MOSI   25
-#define OLED_CLK    33
-#define OLED_DC     32
-#define OLED_RESET  26
-#define OLED_CS     27
-#define PIN_INTERRUPTOR   35
+#define OLED_CLK    9  // D0
+#define OLED_MOSI   10 // D1
+#define OLED_DC     11
+#define OLED_RESET  13
+#define OLED_CS     12
+#define PIN_INTERRUPTOR   6
 
 Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
