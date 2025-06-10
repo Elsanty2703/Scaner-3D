@@ -28,7 +28,8 @@ pulse setupRotation(int dir, int step, int en, unsigned long tau, bool direction
 bool Rotation(pulse *state);
 
 //SCANNER
-typedef struct {
+typedef struct 
+{
     int sensorPin;
     double Bits;
     int noSamples;
@@ -201,6 +202,7 @@ void MotorControl(MOTOR *motor){
                 motor->s.scanning = true;// Re-enable scanning for next cycle
             } else{
                 motor->state = HOME; // Reset to scan after rotation
+                digitalWrite(motor->m2.DIR, motor->m2.dir ? LOW : HIGH);
                 motor->count_r = 0; // Reset right count
                 motor->count_l = 0; // Reset left count
                 motor->count = 0; // Reset count
