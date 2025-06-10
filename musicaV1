@@ -1,17 +1,18 @@
 #include <math.h>
 
-#define NOTE_MI6  1319
-#define NOTE_SOL6  1568
-#define NOTE_LA6  1760
-#define NOTE_LAS6 1865
-#define NOTE_SI6  1976
+#define NOTE_MI6   2638*2
+#define NOTE_SOL6  3136*2
+#define NOTE_LA6   3520*2
+#define NOTE_LAS6  3730*2
+#define NOTE_SI6   3952*2
 
-#define NOTE_DO7  2093
-#define NOTE_RE7  2349
-#define NOTE_MI7  2637
-#define NOTE_FA7  2794
-#define NOTE_SOL7  3136
-#define NOTE_LA7  3520
+#define NOTE_DO7   4186*2
+#define NOTE_RE7   4698*2
+#define NOTE_MI7   5274*2
+#define NOTE_FA7   5588*2
+#define NOTE_SOL7  6272*2
+#define NOTE_LA7   7040*2
+
 
 typedef enum { REPRODUCIENDO, FINALIZADO, ESPERANDO_REPETICION } Estado_Musica;
 
@@ -82,29 +83,12 @@ typedef struct {
     const int* duraciones;
 } Musica;
 
-Musica setupMusica(int pin){
-    Musica m;
-  	pinMode(pin, OUTPUT);
-    m.estadoActual = REPRODUCIENDO;
-    m.buzzerPin = 8;
-    m.totalNotas = sizeof(melodia) / sizeof(melodia[0]);
-    m.tiempoNotaAnterior = 0;
-    m.tiempoFinalizado = 0;
-    m.notaActual = 0;
-    m.notaEnCurso = false;
-    m.tiempoActual = 0;
-    m.melodia = melodia;
-    m.duraciones = duraciones;
-    return m;
-}
-
 Musica setupMusica(int pin);
 void Musica_void(Musica *musica);
 Musica musica;
 
 void setup() {
-  Serial.begin(9600);
-  musica = setupMusica(8); 
+  musica = setupMusica(21); 
 }
 
 void loop() {
@@ -149,4 +133,20 @@ void Musica_void(Musica *musica) {
       }
       break;
   }
+}
+
+Musica setupMusica(int pin){
+    Musica m;
+  	pinMode(pin, OUTPUT);
+    m.estadoActual = REPRODUCIENDO;
+    m.buzzerPin = 21;
+    m.totalNotas = sizeof(melodia) / sizeof(melodia[0]);
+    m.tiempoNotaAnterior = 0;
+    m.tiempoFinalizado = 0;
+    m.notaActual = 0;
+    m.notaEnCurso = false;
+    m.tiempoActual = 0;
+    m.melodia = melodia;
+    m.duraciones = duraciones;
+    return m;
 }
