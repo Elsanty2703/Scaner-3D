@@ -45,7 +45,13 @@ void Distance2matrix(MatrixData *data) {
 
             float lectura = leerDatoBluetooth();
 
-            if (lectura == ESPERANDO_LECTURA) {
+            // Solo marca como ESPERANDO_LECTURA si es igual a la lectura anterior
+            if (lectura == data->lectura_anterior) {
+                lectura = ESPERANDO_LECTURA;
+            } else {
+                data->lectura_anterior = lectura; // actualiza solo si fue diferente
+            }
+            if (lectura == ESPERANDO_LECTURA) {//por si acaso se imprime algo erroneo
                 data->state = DATA;
             } else {
                 int fila = data->rows;

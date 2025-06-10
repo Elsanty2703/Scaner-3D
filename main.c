@@ -13,14 +13,15 @@ typedef enum {
 int main() {
     char *inputFile = "input.txt";
     char *outputFile = "SCAN.stl";
-    float zDelta = 5.f;
+    float zDelta = 1.f;
     GlobalState global_state = FOPEN_G; // ← Corregido
 
     MatrixData matrixData = {
         .state = DATA,
         .matriz = NULL,
         .rows = 0,
-        .cols = 0
+        .cols = 0,
+        .lectura_anterior = 6969.0f
     };
 
     FileData fileData = {
@@ -60,7 +61,7 @@ int main() {
 
 
     // Máquina de estados
-    while (1) {
+    while (global_state != END_G) {
         switch (global_state) {
             case FOPEN_G:
                 printf("Start...\n");
@@ -69,7 +70,13 @@ int main() {
 
             case DATA_G:
                 Distance2matrix(&matrixData);
-                if (matrixData.rows >= 2) {
+                if (matrixData.rows == 2) {
+                    global_state = SCAN_G;
+                }
+                if (matrixData.rows == 50) {
+                    global_state = SCAN_G;
+                }
+                if (matrixData.rows > 78) {
                     global_state = SCAN_G;
                 }
 
@@ -79,10 +86,14 @@ int main() {
 
                 processScanDistance_step(&scan, &ctx, &fileData, &matrixData);
                 global_state = DATA_G;
-
+                if (scan.state==FOPEN() && matrixData.rows == 79) {
+                    global_state = END_G;
+                }
 
             break;
-
+            case END_G:
+                printf("finish, BY TEAM DINAMITA\n");
+                break;
             default:
                 fprintf(stderr, "Estado no reconocido\n");
                 global_state = END_G;

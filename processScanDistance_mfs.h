@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include "Distance2matrix.h"
 
-#define MAX_ROWS 500
-#define MAX_COLS 500
-#define MAX_RAW 250500
+#define MAX_ROWS 250
+#define MAX_COLS 100
+#define MAX_RAW 25000
 
 typedef enum {
     //Generacion de archivo
