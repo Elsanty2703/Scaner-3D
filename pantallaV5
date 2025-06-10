@@ -1,0 +1,230 @@
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <math.h>
+
+#define OLED_MOSI   19
+#define OLED_CLK    18
+#define OLED_DC     22
+#define OLED_RESET  21
+#define OLED_CS     23
+
+Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+
+// Estados de la máquina
+typedef enum{ INICIO, BIENVENIDA,ESCANEANDO,FINALIZADO,CANCELADO } Estado_LCD;
+typedef struct {
+    Estado_LCD estadoActual = INICIO;
+
+    int BOTON_PIN;
+
+    unsigned long tiempoAnterior;
+    unsigned long intervaloCarga;
+    unsigned long tiempoInicio;
+    unsigned long tiempoPresionado;
+    unsigned long tiempoBotonAnterior;
+    unsigned long tiempoCancelacion;
+    unsigned long tiempoFinalizacion;
+
+    bool esperandoAntiRebote;
+
+    int carga;
+
+    int numTriangulos;
+    int numPuntos;
+    float resolucion; 
+} LCD;
+
+LCD setupLCD(int BOTON_PIN, int nTri, int nPoints, int resol);
+void LCD_void(LCD *lcd);
+LCD lcd;
+
+void mostrarPantallaInicio();
+void mostrarCancelacion();
+void mostrarPantallaBienvenida();
+void dibujarEscaneo(LCD *lcd);
+void actualizarCarga(LCD *lcd);
+void mostrarResultados(LCD *lcd);
+
+void setup() {
+  LCD lcd = setupLCD( 33, 1245, 3250, 0.5 );
+  display.begin(SSD1306_SWITCHCAPVCC);
+  display.clearDisplay();
+  display.display();
+  lcd.tiempoInicio = millis();
+}
+
+void loop() {
+  LCD_void(&lcd);
+}
+
+LCD setupLCD(int BOTON_PIN, int nTri, int nPoints, int resol){
+    LCD p;
+    p.estadoActual = INICIO;
+
+    p.BOTON_PIN = BOTON_PIN;
+    pinMode(p.BOTON_PIN, INPUT_PULLDOWN);
+
+    p.tiempoAnterior = 0;
+    p.intervaloCarga = 100;
+    p.tiempoInicio = 0;
+    p.tiempoPresionado = 0;
+    p.tiempoBotonAnterior = 0;
+    p.tiempoCancelacion = 0;
+    p.tiempoFinalizacion = 0;
+
+    p.esperandoAntiRebote = false;
+
+    // Variables de escaneo
+    p.carga = 0;
+
+    // Resultados simulados
+    p.numTriangulos = nTri;
+    p.numPuntos = nPoints;
+    p.resolucion = resol;
+
+    return p;
+}
+
+void LCD_void(LCD *lcd){
+  switch (lcd->estadoActual) {
+    case INICIO:
+      if (millis() - lcd->tiempoInicio >= 3000) {
+        lcd->carga = 0;
+        mostrarPantallaBienvenida();
+        lcd->estadoActual = BIENVENIDA;
+      }
+      break;
+
+    case BIENVENIDA:
+      if (digitalRead(lcd->BOTON_PIN) == LOW && !lcd->esperandoAntiRebote) {
+        lcd->esperandoAntiRebote = true;
+        lcd->tiempoBotonAnterior = millis();
+      }
+
+      if (lcd->esperandoAntiRebote && (millis() - lcd->tiempoBotonAnterior >= 200)) {
+        lcd->esperandoAntiRebote = false;
+        lcd->carga = 0;
+        lcd->tiempoAnterior = millis();
+        lcd->estadoActual = ESCANEANDO;
+      }
+      break;
+
+    case ESCANEANDO:
+      if (digitalRead(lcd->BOTON_PIN) == LOW) {
+        if (lcd->tiempoPresionado == 0) {
+          lcd->tiempoPresionado = millis();
+        } else if (millis() - lcd->tiempoPresionado >= 3000) {
+          mostrarCancelacion();
+          lcd->tiempoCancelacion = millis();
+          lcd->estadoActual = CANCELADO;
+        }
+      } else {
+        lcd->tiempoPresionado = 0;
+      }
+
+      actualizarCarga(lcd);
+      dibujarEscaneo(lcd);
+
+      if (lcd->carga >= 100) {
+        mostrarResultados(lcd);
+        lcd->tiempoFinalizacion = millis();
+        lcd->estadoActual = FINALIZADO;
+      }
+      break;
+
+    case CANCELADO:
+      if (millis() - lcd->tiempoCancelacion >= 2000) {
+        mostrarPantallaBienvenida();
+        lcd->estadoActual = BIENVENIDA;
+      }
+      break;
+
+    case FINALIZADO:
+      if (digitalRead(lcd->BOTON_PIN) == LOW && !lcd->esperandoAntiRebote) {
+        lcd->esperandoAntiRebote = true;
+        lcd->tiempoBotonAnterior = millis();
+      }
+
+      if (lcd->esperandoAntiRebote && (millis() - lcd->tiempoBotonAnterior >= 200)) {
+        lcd->esperandoAntiRebote = false;
+        mostrarPantallaBienvenida();
+        lcd->estadoActual = BIENVENIDA;
+      }
+      break;
+  }
+};
+
+void mostrarPantallaInicio() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(30, 10);
+  display.println("ESCANER 3D");
+  display.setCursor(0, 20);
+  display.println("By Equipo Dinamita");
+  display.display();
+}
+
+void mostrarCancelacion() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(30, 10);
+  display.println("SE CANCELO");
+  display.setCursor(30, 20);
+  display.println("PROCESO");
+  display.display();
+}
+
+void mostrarPantallaBienvenida() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(20, 0);
+  display.println("BIENVENIDO");
+  display.setCursor(0, 15);
+  display.println("Press RED button");
+  display.setCursor(0, 45);
+  display.println("para iniciar el escaneo");
+  display.display();
+}
+
+void actualizarCarga(LCD *lcd) {
+  lcd->carga += 0.1; // aqui verificas sobre que linea vertical esta del final de carrera, si toca tener un (int i) en la maquina del sensor
+  //para hacer una función ahi que me valla devolviendo esa linea, lo divido sobre 200 (MAX lineas) y se multiplica por 100%
+}
+
+void dibujarEscaneo(LCD *lcd) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("Escaneando: ");
+  display.print(lcd->carga);
+  display.print("%");
+  display.drawRect(0, 10, 128, 10, WHITE);
+  display.fillRect(0, 10, (128 * lcd->carga / 100), 10, WHITE);
+  display.display();
+}
+
+void mostrarResultados(LCD *lcd) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("SCAN COMPLETE");
+
+  display.setCursor(0, 8);
+  display.print("Triangulos: ");
+  display.println(lcd->numTriangulos);
+
+  display.setCursor(0, 16);
+  display.print("Puntos: ");
+  display.println(lcd->numPuntos);
+
+  display.setCursor(0, 24);
+  display.print("Resolucion: ");
+  display.print(lcd->resolucion, 1);
+  display.println(" mm");
+
+  display.display();
+}
