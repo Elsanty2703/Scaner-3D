@@ -11,7 +11,6 @@
 //Interruptor: Pin 33
 
 #include <BluetoothSerial.h>
-#include <math.h>
 
 BluetoothSerial BT;
 
@@ -105,7 +104,7 @@ void setup() {
     Serial.begin(115200);
     BT.begin("JP"); // Bluetooth device name
     Serial.println("Bluetooth started, waiting for connection...");
-    machine = setupMotor(20, 200, 80, 200, 35, 32, 2, 15, 33); 
+    machine = setupMotor(40, 400, 40, 200, 35, 32, 2, 15, 33); 
     machine.m1 = setupRotation(18, 5, 0, 2, false);
     machine.m2 = setupRotation(23, 22, 19, 2, false);
     machine.s = setupSensor(34, 4095, 50); // Sensor setup
@@ -266,19 +265,44 @@ void MotorControl(MOTOR *motor){
             break;
         case PROCESANDO:
             motor->s.analog = motor->s.sumOfSamples / motor->s.noSamples; // Calcula el promedio
-            if(motor->s.analog >= 3920){
-                motor->s.distancia = 0;
-            } else if(motor->s.analog >=1600){
-                motor->s.distancia = (0.00000078*pow(motor->s.analog,2))-(0.0078*motor->s.analog)+25.9;
-            } else{
-                motor->s.distancia = 50;
+            motor->s.Voltaje = mapDouble((double)motor->s.analog, 0.0, motor->s.Bits, 0.0, 5.0); // Convierte a voltaje
+
+            if (motor->s.Voltaje >= 2.9) {  // 6
+                motor->s.distancia = 40.82545 * exp(-0.65439 * motor->s.Voltaje) + 0.3;  // Modelo 5
+            } else if (motor->s.Voltaje >= 2.7) {  // 7
+                motor->s.distancia = 21.83057 * pow(motor->s.Voltaje, -1.03006) - 0.50;  // Modelo 4
+            } else if (motor->s.Voltaje >= 2.4) {  // 8
+                motor->s.distancia = 21.83057 * pow(motor->s.Voltaje, -1.03006) - 0.34;  // Modelo 4
+            } else if (motor->s.Voltaje >= 2.2) {  // 9
+                motor->s.distancia = 40.82545 * exp(-0.65439 * motor->s.Voltaje) + 0.06;  // Modelo 5
+            } else if (motor->s.Voltaje >= 2.0) {  // 10
+                motor->s.distancia = 21.83057 * pow(motor->s.Voltaje, -1.03006) - 0.09;   // Modelo 4
+            } else if (motor->s.Voltaje >= 1.8) {  // 11
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062) - 0.17 ;   // Modelo 3
+            } else if (motor->s.Voltaje >= 1.72) {  // 12
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062) - 0.10;    // Modelo 3
+            } else if (motor->s.Voltaje >= 1.59) {  // 13
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062) - 0.20;  // Modelo 3
+            } else if (motor->s.Voltaje >= 1.49) {  // 14
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062);  // Modelo 3
+            } else if (motor->s.Voltaje >= 1.39) {  // 15
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062) + 0.12; // Modelo 3
+            } else if (motor->s.Voltaje >= 1.29) {  // 16
+                motor->s.distancia = 20.4026 * pow(motor->s.Voltaje, -0.90119) - 0.11;  // Modelo 2
+            } else if (motor->s.Voltaje >= 1.20) {  // 17
+                motor->s.distancia = 20.4026 * pow(motor->s.Voltaje, -0.90119) ;  // Modelo 2
+            } else if (motor->s.Voltaje >= 1.09) {  // 18 y 19
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062) + 0.15;  // Modelo 3
+            } else {  // 20++
+                motor->s.distancia = 21.12816 * pow(motor->s.Voltaje, -0.98062);  // Modelo 3
             }
 
-            BT.print("Analogo: ");
-            BT.print(motor->s.analog);
+            BT.print("Voltaje: ");
+            BT.print(motor->s.Voltaje);
+            BT.print(" V | ");
             BT.print("Distancia: ");
             BT.print(motor->s.distancia);
-            BT.println("cm");
+            BT.println(" cm");
 
             if(motor->s.distancia > 30){
                 motor->s.distancia = SKY;
