@@ -9,18 +9,11 @@
 #include <math.h>
 #include <string.h>
 
-#include "processScanDistance_mfs.h"
+#include "bluetooth_windows.c"
 
 #define ESPERANDO_LECTURA 6969.0f
 
-float leerDatoBluetooth() {
-    float dato;
-    if (scanf("%f", &dato) == 1) {
-        return dato;
-    } else {
-        return ESPERANDO_LECTURA;  // Si no se recibe nada, simula que no hay dato.
-    }
-}
+
 
 void Distance2matrix(MatrixData *data) {
     float **matriz = data->matriz;

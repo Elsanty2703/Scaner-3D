@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "processScanDistance_mfs.h"
 #include "distance2matrix.h"
+#include "bluetooth_windows.c"
 
 typedef enum {
     FOPEN_G,
@@ -11,6 +12,7 @@ typedef enum {
 } GlobalState;
 
 int main() {
+    initBluetooth("COM5");
     char *inputFile = "input.txt";
     char *outputFile = "SCAN.stl";
     float zDelta = 1.f;
@@ -36,8 +38,8 @@ int main() {
 
     ScanData scan = {
         .state = FOPEN,
-        .centerDistance = 14.0f,
-        .maxDistance = 26.5f,
+        .centerDistance = 14.5f,
+        .maxDistance = 22.0f,
         .minDistance = 0.0f,
         .zDelta = zDelta,
         .inputFilename = inputFile,
@@ -100,6 +102,6 @@ int main() {
                 break;
         }
     }
-
+    cerrarBluetooth();
     return 0;
 }
