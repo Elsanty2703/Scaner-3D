@@ -1,0 +1,152 @@
+#include <math.h>
+
+#define NOTE_MI6  1319
+#define NOTE_SOL6  1568
+#define NOTE_LA6  1760
+#define NOTE_LAS6 1865
+#define NOTE_SI6  1976
+
+#define NOTE_DO7  2093
+#define NOTE_RE7  2349
+#define NOTE_MI7  2637
+#define NOTE_FA7  2794
+#define NOTE_SOL7  3136
+#define NOTE_LA7  3520
+
+typedef enum { REPRODUCIENDO, FINALIZADO, ESPERANDO_REPETICION } Estado_Musica;
+
+const int melodia[] = {
+  NOTE_MI7, NOTE_MI7, 0, NOTE_MI7,
+  0, NOTE_DO7, NOTE_MI7, 0,
+  NOTE_SOL7, 0, 0,  0,
+  NOTE_SOL6, 0, 0, 0,
+
+  NOTE_DO7, 0, 0, NOTE_SOL6,
+  0, 0, NOTE_MI6, 0,
+  0, NOTE_LA6, 0, NOTE_SI6,
+  0, NOTE_LAS6, NOTE_LA6, 0,
+
+  NOTE_SOL6, NOTE_MI7, NOTE_SOL7,
+  NOTE_LA7, 0, NOTE_FA7, NOTE_SOL7,
+  0, NOTE_MI7, 0, NOTE_DO7,
+  NOTE_RE7, NOTE_SI6, 0, 0,
+
+  NOTE_DO7, 0, 0, NOTE_SOL6,
+  0, 0, NOTE_MI6, 0,
+  0, NOTE_LA6, 0, NOTE_SI6,
+  0, NOTE_LAS6, NOTE_LA6, 0,
+
+  NOTE_SOL6, NOTE_MI7, NOTE_SOL7,
+  NOTE_LA7, 0, NOTE_FA7, NOTE_SOL7,
+  0, NOTE_MI7, 0, NOTE_DO7,
+  NOTE_RE7, NOTE_SI6, 0, 0
+};
+
+const int duraciones[] = {
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+
+  9, 9, 9,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+
+  9, 9, 9,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+  12, 12, 12, 12,
+};
+
+typedef struct {
+    Estado_Musica estadoActual;
+    int buzzerPin;
+    int totalNotas;
+    unsigned long tiempoNotaAnterior;
+    unsigned long tiempoFinalizado;
+    int notaActual;
+    bool notaEnCurso;
+    unsigned long tiempoActual;
+    const int* melodia;
+    const int* duraciones;
+} Musica;
+
+Musica setupMusica(int pin){
+    Musica m;
+  	pinMode(pin, OUTPUT);
+    m.estadoActual = REPRODUCIENDO;
+    m.buzzerPin = 8;
+    m.totalNotas = sizeof(melodia) / sizeof(melodia[0]);
+    m.tiempoNotaAnterior = 0;
+    m.tiempoFinalizado = 0;
+    m.notaActual = 0;
+    m.notaEnCurso = false;
+    m.tiempoActual = 0;
+    m.melodia = melodia;
+    m.duraciones = duraciones;
+    return m;
+}
+
+Musica setupMusica(int pin);
+void Musica_void(Musica *musica);
+Musica musica;
+
+void setup() {
+  Serial.begin(9600);
+  musica = setupMusica(8); 
+}
+
+void loop() {
+  Musica_void(&musica);
+}
+
+void Musica_void(Musica *musica) {
+
+  switch (musica->estadoActual) {
+    case REPRODUCIENDO:
+      if (musica->notaActual < musica->totalNotas) {
+        if (!musica->notaEnCurso) {
+          if (musica->melodia[musica->notaActual] != 0) {
+            tone(musica->buzzerPin, musica->melodia[musica->notaActual]/2);
+          } else {
+            noTone(musica->buzzerPin);
+          }
+          musica->tiempoNotaAnterior = millis();
+          musica->notaEnCurso = true;
+        } else if (millis() - musica->tiempoNotaAnterior >= musica->duraciones[musica->notaActual]*9) {
+          noTone(musica->buzzerPin);
+          musica->notaActual++;
+          musica->tiempoNotaAnterior = millis();
+          musica->notaEnCurso = false;
+        }
+      } else {
+        musica->estadoActual = FINALIZADO;
+        musica->tiempoFinalizado = millis();
+      }
+      break;
+
+    case FINALIZADO:
+      musica->estadoActual = ESPERANDO_REPETICION;
+      break;
+
+    case ESPERANDO_REPETICION:
+      if (millis() - musica->tiempoFinalizado >= 1000) {
+        musica->estadoActual = REPRODUCIENDO;
+        musica->notaActual = 0;
+        musica->tiempoNotaAnterior = millis();
+        musica->notaEnCurso = false;
+      }
+      break;
+  }
+}
