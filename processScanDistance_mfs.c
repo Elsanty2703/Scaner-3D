@@ -1,4 +1,5 @@
 // processScanDistance_mfs.c
+// Author Thomas Santiago Ramirez Moreno
 #include "processScanDistance_mfs.h"
 #include <stdlib.h>
 #include <math.h>
@@ -57,6 +58,7 @@ void processScanDistance_step(ScanData *data, Surf2STLContext *ctx,FileData *fil
             perror("Esperando txt");
         }
         else {
+            printf("Cargando txt\n");
             data->state = ROWS;
         }
         break;
@@ -95,6 +97,7 @@ void processScanDistance_step(ScanData *data, Surf2STLContext *ctx,FileData *fil
                 perror("Error abriendo archivo");
                 data->state = OPEN_FILE;
             } else {
+                printf("txt abierto\n");
                 data->state = FILE_LOAD;
 
             }
@@ -239,7 +242,7 @@ void processScanDistance_step(ScanData *data, Surf2STLContext *ctx,FileData *fil
         case F_OPEN:
             char new_filename[256]; // O asegúrate de que sea suficientemente largo
         sprintf(new_filename, "%d_%s", ctx->file_count, ctx->filename);
-
+        printf("creando stl\n");
         ctx->f = fopen(new_filename, "wb");
         if (!ctx->f) {
             printf("esperando archivo");

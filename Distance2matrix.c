@@ -6,13 +6,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
+
 #include "processScanDistance_mfs.h"
 
 #define ESPERANDO_LECTURA 6969.0f
 
-// Funciones externas (deben estar definidas en otro archivo)
-extern float sensorgamboa();   // Devuelve un float con el dato leído
-extern int nuevaFila();        // Devuelve 1 si se debe cambiar de fila
+float leerDatoBluetooth() {
+    float dato;
+    if (scanf("%f", &dato) == 1) {
+        return dato;
+    } else {
+        return ESPERANDO_LECTURA;  // Si no se recibe nada, simula que no hay dato.
+    }
+}
 
 void Distance2matrix(MatrixData *data) {
     float **matriz = data->matriz;
@@ -24,6 +31,7 @@ void Distance2matrix(MatrixData *data) {
                 data->rows = 0;
                 data->cols = 0;
                 data->cols_ult = 0;
+                data->contador = 0; // Inicializa contador
                 data->matriz = malloc(sizeof(float*));
                 data->cols_por_fila = malloc(sizeof(int));
                 if (!data->matriz || !data->cols_por_fila) {
@@ -34,10 +42,10 @@ void Distance2matrix(MatrixData *data) {
                 matriz = data->matriz;
             }
 
-            float lectura = sensorgamboa();
+            float lectura = leerDatoBluetooth();
 
             if (lectura == ESPERANDO_LECTURA) {
-                data->state = N_ROWS;
+                data->state = DATA;
             } else {
                 int fila = data->rows;
                 int nueva_columna = data->cols + 1;
@@ -53,12 +61,18 @@ void Distance2matrix(MatrixData *data) {
                 data->cols = nueva_columna;
                 data->cols_por_fila[data->rows] = data->cols;
                 data->matriz = matriz;
+                data->contador++;  // Aumenta contador
+                printf("Distancia guarda:\n", lectura);
+                if (data->contador >= 80) {
+                    data->state = N_ROWS;
+                    data->contador = 0;  // Reinicia contador
+                    printf("Fila %d completada con %d columnas.\n", data->rows, data->cols);
+                }
             }
             break;
         }
 
         case N_ROWS: {
-            if (nuevaFila()) {
                 int nueva_fila = data->rows + 1;
                 float **newMatriz = realloc(matriz, (nueva_fila + 1) * sizeof(float*));
                 // Ampliar cols_por_fila para una fila más
@@ -78,9 +92,7 @@ void Distance2matrix(MatrixData *data) {
                 data->cols_ult = data->cols;
                 data->cols = 0;
                 data->state = DATA;
-            } else {
-                data->state = DATA;
-            }
+
             break;
         }
 

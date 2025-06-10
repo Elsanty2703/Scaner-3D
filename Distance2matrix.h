@@ -17,10 +17,8 @@ typedef struct {
     int cols;
     int *cols_por_fila;  // ← NUEVO: columnas reales por fila
     int cols_ult;
+    int contador;
 } MatrixData;
-
-float sensorgamboa();
-int nuevaFila();
 
 void Distance2matrix(MatrixData *data);
 
