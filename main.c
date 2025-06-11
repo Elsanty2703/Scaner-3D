@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "processScanDistance_mfs.h"
 #include "distance2matrix.h"
-#include "bluetooth_windows.c"
+#include "serial_reader.h"
 
 typedef enum {
     FOPEN_G,
@@ -12,10 +12,10 @@ typedef enum {
 } GlobalState;
 
 int main() {
-    initBluetooth("COM5");
+    serial_init("\\\\.\\COM11");
     char *inputFile = "input.txt";
     char *outputFile = "SCAN.stl";
-    float zDelta = 1.f;
+    float zDelta = 0.1f;
     GlobalState global_state = FOPEN_G; // ← Corregido
 
     MatrixData matrixData = {
@@ -63,45 +63,17 @@ int main() {
 
 
     // Máquina de estados
-    while (global_state != END_G) {
-        switch (global_state) {
-            case FOPEN_G:
-                printf("Start...\n");
-                global_state = DATA_G;
-                break;
-
-            case DATA_G:
+    while (1) {
+       
                 Distance2matrix(&matrixData);
-                if (matrixData.rows == 2) {
-                    global_state = SCAN_G;
+               
+                if(matrixData.rows>10){
+                                processScanDistance_step(&scan, &ctx, &fileData, &matrixData);
+                                printf("Estado del escaneo: %d\n", scan.state);
                 }
-                if (matrixData.rows == 50) {
-                    global_state = SCAN_G;
-                }
-                if (matrixData.rows > 78) {
-                    global_state = SCAN_G;
-                }
+                
 
-                break;
-
-            case SCAN_G:
-
-                processScanDistance_step(&scan, &ctx, &fileData, &matrixData);
-                global_state = DATA_G;
-                if (scan.state==FOPEN && matrixData.rows == 79) {
-                    global_state = END_G;
-                }
-
-            break;
-            case END_G:
-                printf("finish, BY TEAM DINAMITA\n");
-                break;
-            default:
-                fprintf(stderr, "Estado no reconocido\n");
-                global_state = END_G;
-                break;
-        }
     }
-    cerrarBluetooth();
+    serial_close();
     return 0;
 }
