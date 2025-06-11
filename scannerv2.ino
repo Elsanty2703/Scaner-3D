@@ -11,6 +11,9 @@
 //Interruptor: Pin 33
 
 #include <math.h>
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 
 #define SKY 100.0 // Maximum distance threshold (cm) for sensor out-of-range detection
@@ -145,20 +148,69 @@ Musica setupMusica(int pin);
 void Musica_void(Musica *musica);
 Musica musica;
 
+#define OLED_MOSI   14
+#define OLED_CLK    12
+#define OLED_DC     26
+#define OLED_RESET  27
+#define OLED_CS     25
+
+Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+
+// Estados de la máquina
+typedef enum{ INICIO, BIENVENIDA,ESCANEANDO,FINALIZA,CANCELADO } Estado_LCD;
+typedef struct {
+    Estado_LCD estadoActual = INICIO;
+
+    int BOTON_PIN;
+
+    unsigned long tiempoAnterior;
+    unsigned long intervaloCarga;
+    unsigned long tiempoInicio;
+    unsigned long tiempoPresionado;
+    unsigned long tiempoBotonAnterior;
+    unsigned long tiempoCancelacion;
+    unsigned long tiempoFinalizacion;
+
+    bool esperandoAntiRebote;
+
+    int carga;
+
+    int numTriangulos;
+    int numPuntos;
+    float resolucion; 
+} LCD;
+bool pulsed = false;
+
+LCD setupLCD(int nTri, int nPoints, int resol);
+void LCD_void(LCD *lcd);
+LCD lcd;
+
+void mostrarPantallaInicio();
+void mostrarCancelacion();
+void mostrarPantallaBienvenida();
+void dibujarEscaneo(LCD *lcd);
+void actualizarCarga(LCD *lcd);
+void mostrarResultados(LCD *lcd);
+
 
 void setup() {
     Serial.begin(115200);
     machine = setupMotor(20, 200, 80, 200, 35, 32, 2, 15, 33); 
     machine.m1 = setupRotation(18, 5, 0, 2, false);
     machine.m2 = setupRotation(23, 22, 19, 2, false);
-    machine.s = setupSensor(34, 4095, 50); // Sensor setup
-    
+    machine.s = setupSensor(34, 4095, 10); // Sensor setup
     musica = setupMusica(21);
+    LCD lcd = setupLCD(1245, 3250, 0.5 );
+  display.begin(SSD1306_SWITCHCAPVCC);
+  display.clearDisplay();
+  display.display();
+  lcd.tiempoInicio = millis();
 }
 
 void loop() {
     MotorControl(&machine);
     Musica_void(&musica);
+    LCD_void(&lcd);
 }
 
 MOTOR setupMotor(int step_r, int step_l, int num_r, int num_l, int MAX, int HOME, int B1, int B2, int I){
@@ -195,6 +247,7 @@ void MotorControl(MOTOR *motor){
     switch(motor->state) {
         case WELLCOME:
             if(digitalRead(motor->INTERRUPTOR) == HIGH){
+                pulsed = true;
                 motor->state = SCAN; // Transition to SCAN state
                 motor->s.scanning = true; // Enable scanning
             } else if(digitalRead(motor->B1) == HIGH){
@@ -206,6 +259,7 @@ void MotorControl(MOTOR *motor){
             break;
         case SCAN:
             if(motor->s.scanning) {
+                pulsed = false;
                 motor->state = ESPERANDO;
                 motor->s.timer = millis();
                 motor->s.scanning = false; 
@@ -286,6 +340,7 @@ void MotorControl(MOTOR *motor){
 
             } else if(digitalRead(motor->INTERRUPTOR) == HIGH){
                 motor->state = WELLCOME; 
+                pulsed = true;
                 motor->count_r = 0;
                 motor->count_l = 0;
                 motor->count = 0;
@@ -463,4 +518,189 @@ Musica setupMusica(int pin){
     m.melodia = melodia;
     m.duraciones = duraciones;
     return m;
+}
+
+// LCD
+LCD setupLCD(int nTri, int nPoints, int resol){
+    LCD p;
+    p.estadoActual = INICIO;
+
+    p.tiempoAnterior = 0;
+    p.intervaloCarga = 100;
+    p.tiempoInicio = 0;
+    p.tiempoPresionado = 0;
+    p.tiempoBotonAnterior = 0;
+    p.tiempoCancelacion = 0;
+    p.tiempoFinalizacion = 0;
+
+    p.esperandoAntiRebote = false;
+
+    // Variables de escaneo
+    p.carga = 0;
+
+    // Resultados simulados
+    p.numTriangulos = nTri;
+    p.numPuntos = nPoints;
+    p.resolucion = resol;
+
+    return p;
+}
+
+void LCD_void(LCD *lcd) {
+  switch (lcd->estadoActual) {
+    case INICIO:
+      if (millis() - lcd->tiempoInicio < 3000) {
+        lcd->carga = 0;
+        mostrarPantallaInicio();  
+      } else {
+        lcd->estadoActual = BIENVENIDA;
+      }
+
+      break;
+
+    case BIENVENIDA:
+     mostrarPantallaBienvenida();
+      if (pulsed && !lcd->esperandoAntiRebote) {
+        lcd->esperandoAntiRebote = true;
+        lcd->tiempoBotonAnterior = millis();
+      }
+
+      if (lcd->esperandoAntiRebote && (millis() - lcd->tiempoBotonAnterior >= 200)) {
+        lcd->esperandoAntiRebote = false;
+        lcd->carga = 0;
+        lcd->tiempoAnterior = millis();
+        lcd->estadoActual = ESCANEANDO;
+      }
+      break;
+
+    case ESCANEANDO:
+      if (pulsed) {
+        if (lcd->tiempoPresionado == 0) {
+          lcd->tiempoPresionado = millis();
+        } else if (millis() - lcd->tiempoPresionado >= 2000) {
+          mostrarCancelacion();
+          lcd->tiempoCancelacion = millis();
+          lcd->estadoActual = CANCELADO;
+        }
+      } else {
+        lcd->tiempoPresionado = 0;
+      }
+
+      actualizarCarga(lcd);
+      dibujarEscaneo(lcd);
+
+      if (lcd->carga >= 100.0) {
+        mostrarResultados(lcd);
+        lcd->tiempoFinalizacion = millis();
+        lcd->estadoActual = FINALIZA;
+      }
+      break;
+
+   case CANCELADO:
+      if (millis() - lcd->tiempoCancelacion >= 2000) {
+        mostrarPantallaBienvenida();
+        lcd->estadoActual = BIENVENIDA;
+      } else {
+        mostrarCancelacion();
+      }
+      break;
+
+    case FINALIZA:
+      if (pulsed && !lcd->esperandoAntiRebote) {
+        lcd->esperandoAntiRebote = true;
+        lcd->tiempoBotonAnterior = millis();
+      }
+
+      if (lcd->esperandoAntiRebote && (millis() - lcd->tiempoBotonAnterior >= 200)) {
+        lcd->esperandoAntiRebote = false;
+        mostrarPantallaBienvenida();
+        lcd->estadoActual = BIENVENIDA;
+      }
+      break;
+  }
+}
+
+void mostrarPantallaInicio() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(30, 10);
+  display.println("ESCANER 3D");
+  display.setCursor(0, 20);
+  display.println("By Equipo Dinamita");
+  display.display();
+}
+
+void mostrarCancelacion() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(30, 10);
+  display.println("SE CANCELO");
+  display.setCursor(30, 20);
+  display.println("PROCESO");
+  display.display();
+}
+
+void mostrarPantallaBienvenida() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(20, 0);
+  display.println("BIENVENIDO");
+  display.setCursor(0, 15);
+  display.println("Press RED button");
+  display.setCursor(0, 45);
+  display.println("para iniciar el escaneo");
+  display.display();
+}
+
+void actualizarCarga(LCD *lcd) {
+  if (millis() - lcd->tiempoAnterior >= lcd->intervaloCarga) {
+    lcd->tiempoAnterior = millis();
+    lcd->carga += 1.0;
+    if (lcd->carga > 100.0) {
+      lcd->carga = 100.0;
+    }
+  }
+}
+
+void dibujarEscaneo(LCD *lcd) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("Escaneando: ");
+  display.print(lcd->carga, 1);
+  display.print("%");
+  display.drawRect(0, 10, 128, 10, WHITE);
+  display.fillRect(0, 10, (128 * lcd->carga / 100.0), 10, WHITE);
+   display.setCursor(0, 23);
+  display.setTextSize(1);
+  display.print("Scan Dist:");
+  display.setCursor(0, 48);
+ display.print(machine.s.distancia, 2);
+ display.print(" cm");
+  display.display();
+}
+
+void mostrarResultados(LCD *lcd) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("SCAN COMPLETE");
+
+  display.setCursor(0, 8);
+  display.print("Triangulos: ");
+  display.println(lcd->numTriangulos);
+
+  display.setCursor(0, 16);
+  display.print("Puntos: ");
+  display.println(lcd->numPuntos);
+
+  display.setCursor(0, 24);
+  display.print("Resolucion: ");
+  display.print(lcd->resolucion, 1);
+  display.println(" mm");
+
+  display.display();
 }

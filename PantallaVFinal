@@ -8,11 +8,8 @@
 #define OLED_DC     22
 #define OLED_RESET  21
 #define OLED_CS     23
-
-
 Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
-// Estados de la máquina
 typedef enum { INICIO, BIENVENIDA, ESCANEANDO, FINALIZADO, CANCELADO } Estado_LCD;
 
 typedef struct {
@@ -49,10 +46,6 @@ void mostrarResultados(LCD *lcd);
 
 void setup() {
   lcd = setupLCD(33, 1245, 3250, 0.5); // CORREGIDO: usamos la variable global lcd
-  display.begin(SSD1306_SWITCHCAPVCC);
-  display.clearDisplay();
-  display.display();
-  lcd.tiempoInicio = millis();
 }
 
 void loop() {
@@ -62,10 +55,7 @@ void loop() {
 LCD setupLCD(int BOTON_PIN, int nTri, int nPoints, float resol) {
     LCD p;
     p.estadoActual = INICIO;
-
     p.BOTON_PIN = BOTON_PIN;
-    pinMode(p.BOTON_PIN, INPUT_PULLDOWN);
-
     p.tiempoAnterior = 0;
     p.intervaloCarga = 100;
     p.tiempoInicio = 0;
@@ -81,7 +71,10 @@ LCD setupLCD(int BOTON_PIN, int nTri, int nPoints, float resol) {
     p.numTriangulos = nTri;
     p.numPuntos = nPoints;
     p.resolucion = resol;
-
+    display.begin(SSD1306_SWITCHCAPVCC);
+    display.clearDisplay();
+    display.display();
+    P.tiempoInicio = millis();
     return p;
 }
 

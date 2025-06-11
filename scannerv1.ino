@@ -151,7 +151,7 @@ void setup() {
     machine = setupMotor(20, 200, 80, 200, 35, 32, 2, 15, 33); 
     machine.m1 = setupRotation(18, 5, 0, 2, false);
     machine.m2 = setupRotation(23, 22, 19, 2, false);
-    machine.s = setupSensor(34, 4095, 50); // Sensor setup
+    machine.s = setupSensor(34, 4095, 10); // Sensor setup
     
     musica = setupMusica(21);
 }
